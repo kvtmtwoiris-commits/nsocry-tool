@@ -18,7 +18,7 @@ public sealed class MainForm : Form
     private static readonly Color RedSoft = Color.FromArgb(255, 241, 242);
     private static readonly Color Amber = Color.FromArgb(217, 119, 6);
     private static readonly Color AmberSoft = Color.FromArgb(255, 251, 235);
-    private static readonly Color Text = Color.FromArgb(15, 23, 42);
+    private static readonly Color TextPrimary = Color.FromArgb(15, 23, 42);
     private static readonly Color Muted = Color.FromArgb(100, 116, 139);
     private static readonly Color Line = Color.FromArgb(226, 232, 240);
 
@@ -41,7 +41,7 @@ public sealed class MainForm : Form
 
         Text = "NSOCry Pro";
         BackColor = Bg;
-        ForeColor = Text;
+        ForeColor = TextPrimary;
         Font = new Font("Segoe UI", 9.5F);
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(1120, 700);
@@ -221,8 +221,8 @@ public sealed class MainForm : Form
         };
         _grid.DefaultCellStyle = new DataGridViewCellStyle
         {
-            BackColor = White, ForeColor = Text, SelectionBackColor = BlueSoft,
-            SelectionForeColor = Text, Font = new Font("Segoe UI", 9.5F),
+            BackColor = White, ForeColor = TextPrimary, SelectionBackColor = BlueSoft,
+            SelectionForeColor = TextPrimary, Font = new Font("Segoe UI", 9.5F),
             Padding = new Padding(8, 0, 8, 0)
         };
         _grid.DataSource = _profiles;
@@ -238,8 +238,10 @@ public sealed class MainForm : Form
         _grid.CellFormatting += (_, e) =>
         {
             if (_grid.Columns[e.ColumnIndex].Name != "Status" || e.Value is not string state) return;
-            e.CellStyle.ForeColor = state == "RUNNING" ? Green : Red;
-            e.CellStyle.Font = new Font("Segoe UI Semibold", 9F);
+            var style = e.CellStyle;
+            if (style is null) return;
+            style.ForeColor = state == "RUNNING" ? Green : Red;
+            style.Font = new Font("Segoe UI Semibold", 9F);
         };
     }
 
@@ -286,7 +288,7 @@ public sealed class MainForm : Form
 
     private static TabPage InfoTab(string title, string heading, string description)
     {
-        var page = new TabPage(title) { BackColor = White, ForeColor = Text };
+        var page = new TabPage(title) { BackColor = White, ForeColor = TextPrimary };
         page.Controls.Add(new Label
         {
             Text = description, Location = new Point(20, 52), Size = new Size(800, 45),
@@ -295,7 +297,7 @@ public sealed class MainForm : Form
         page.Controls.Add(new Label
         {
             Text = heading, AutoSize = true, Location = new Point(20, 17),
-            ForeColor = Text, Font = new Font("Segoe UI Semibold", 12F)
+            ForeColor = TextPrimary, Font = new Font("Segoe UI Semibold", 12F)
         });
         return page;
     }
@@ -323,7 +325,7 @@ public sealed class MainForm : Form
         }
         else
         {
-            button.BackColor = White; button.ForeColor = Text;
+            button.BackColor = White; button.ForeColor = TextPrimary;
             button.FlatAppearance.BorderColor = Line;
             button.FlatAppearance.MouseOverBackColor = Color.FromArgb(248, 250, 252);
         }
@@ -338,7 +340,7 @@ public sealed class MainForm : Form
 
     private static Label MetricValue() => new()
     {
-        Text = "0", AutoSize = true, ForeColor = Text,
+        Text = "0", AutoSize = true, ForeColor = TextPrimary,
         Font = new Font("Segoe UI Semibold", 18F, FontStyle.Bold)
     };
 
