@@ -47,3 +47,7 @@ dist/NSOCryPro.exe
 ```
 
 Trước lần build đầu tiên, đặt `microemulator.jar` và `game.jar` trong thư mục `runtime` tại gốc repository.
+
+## Tài liệu giao diện
+
+Mọi thay đổi GUI phải tuân theo [NSOCry Pro UI Design System](docs/UI-DESIGN-SYSTEM.md).
