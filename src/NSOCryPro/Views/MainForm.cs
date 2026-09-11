@@ -209,6 +209,7 @@ public sealed class MainForm : Form
         _grid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
         _grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         _grid.MultiSelect = true;
+        _grid.EditMode = DataGridViewEditMode.EditOnEnter;
         _grid.EnableHeadersVisualStyles = false;
         _grid.ColumnHeadersHeight = 44;
         _grid.RowTemplate.Height = 44;
@@ -235,6 +236,12 @@ public sealed class MainForm : Form
         _grid.Columns.Add(TextColumn("Ram", "RAM", 100, true));
         _grid.Columns.Add(CheckColumn(nameof(ClientProfile.AutoRestart), "TỰ KHỞI ĐỘNG", 120));
         _grid.Columns[^1].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+        _grid.CellPainting += PaintCheckBoxCell;
+        _grid.CurrentCellDirtyStateChanged += (_, _) =>
+        {
+            if (_grid.IsCurrentCellDirty)
+                _grid.CommitEdit(DataGridViewDataErrorContexts.Commit);
+        };
         _grid.CellFormatting += (_, e) =>
         {
             if (_grid.Columns[e.ColumnIndex].Name != "Status" || e.Value is not string state) return;
@@ -243,6 +250,56 @@ public sealed class MainForm : Form
             style.ForeColor = state == "RUNNING" ? Green : Red;
             style.Font = new Font("Segoe UI Semibold", 9F);
         };
+    }
+
+    private void PaintCheckBoxCell(object? sender, DataGridViewCellPaintingEventArgs e)
+    {
+        if (e.RowIndex < 0 || _grid.Columns[e.ColumnIndex] is not DataGridViewCheckBoxColumn)
+            return;
+
+        e.PaintBackground(e.CellBounds, true);
+        const int size = 18;
+        var x = e.CellBounds.Left + (e.CellBounds.Width - size) / 2;
+        var y = e.CellBounds.Top + (e.CellBounds.Height - size) / 2;
+        var box = new Rectangle(x, y, size, size);
+        var isChecked = e.FormattedValue is bool value && value;
+
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        using var path = RoundedRectangle(box, 5);
+        using var fill = new SolidBrush(isChecked ? Blue : White);
+        using var border = new Pen(isChecked ? Blue : Color.FromArgb(203, 213, 225), 1.4F);
+        e.Graphics.FillPath(fill, path);
+        e.Graphics.DrawPath(border, path);
+
+        if (isChecked)
+        {
+            using var tick = new Pen(White, 2F)
+            {
+                StartCap = LineCap.Round,
+                EndCap = LineCap.Round,
+                LineJoin = LineJoin.Round
+            };
+            e.Graphics.DrawLines(tick,
+            [
+                new PointF(x + 4.5F, y + 9.5F),
+                new PointF(x + 7.5F, y + 12.5F),
+                new PointF(x + 13.5F, y + 5.5F)
+            ]);
+        }
+        e.Handled = true;
+    }
+
+    private static GraphicsPath RoundedRectangle(Rectangle rectangle, int radius)
+    {
+        var diameter = radius * 2;
+        var path = new GraphicsPath();
+        var arc = new Rectangle(rectangle.X, rectangle.Y, diameter, diameter);
+        path.AddArc(arc, 180, 90);
+        arc.X = rectangle.Right - diameter; path.AddArc(arc, 270, 90);
+        arc.Y = rectangle.Bottom - diameter; path.AddArc(arc, 0, 90);
+        arc.X = rectangle.Left; path.AddArc(arc, 90, 90);
+        path.CloseFigure();
+        return path;
     }
 
     private Control SettingsCard()
