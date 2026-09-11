@@ -37,3 +37,13 @@ dotnet publish src/NSOCryPro/NSOCryPro.csproj -c Release -r win-x64 --self-conta
 ```
 
 Giai đoạn tiếp theo sẽ bổ sung điều khiển cửa sổ, auto restart, trạng thái nhân vật và các tab auto.
+
+## Cập nhật và build tự động
+
+Nhấp đúp vào `Update-Build.bat`. Script sẽ tự pull mã mới, build bản Release và đặt kết quả trong:
+
+```text
+dist/NSOCryPro.exe
+```
+
+Trước lần build đầu tiên, đặt `microemulator.jar` và `game.jar` trong thư mục `runtime` tại gốc repository.
