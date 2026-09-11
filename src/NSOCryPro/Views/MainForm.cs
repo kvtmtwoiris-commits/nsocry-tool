@@ -7,6 +7,15 @@ namespace NSOCryPro.Views;
 
 public sealed class MainForm : Form
 {
+    private static readonly Color Background = Color.FromArgb(15, 23, 42);
+    private static readonly Color Surface = Color.FromArgb(30, 41, 59);
+    private static readonly Color SurfaceLight = Color.FromArgb(51, 65, 85);
+    private static readonly Color Border = Color.FromArgb(71, 85, 105);
+    private static readonly Color TextMain = Color.FromArgb(241, 245, 249);
+    private static readonly Color TextMuted = Color.FromArgb(148, 163, 184);
+    private static readonly Color Accent = Color.FromArgb(34, 211, 238);
+    private static readonly Color Success = Color.FromArgb(52, 211, 153);
+    private static readonly Color Danger = Color.FromArgb(251, 113, 133);
     private readonly JsonProfileStore _store;
     private readonly ClientProcessManager _processManager;
     private readonly BindingList<ClientProfile> _profiles;
@@ -21,9 +30,14 @@ public sealed class MainForm : Form
         _profiles = new BindingList<ClientProfile>(_store.Load());
 
         Text = "NSOCry Pro";
+        BackColor = Background;
+        ForeColor = TextMain;
+        Font = new Font("Segoe UI", 10F);
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(980, 580);
-        Size = new Size(1120, 680);
+        MinimumSize = new Size(1080, 640);
+        Size = new Size(1240, 740);
+        Padding = new Padding(18);
+        AutoScaleMode = AutoScaleMode.Dpi;
 
         BuildInterface();
         _timer.Tick += (_, _) => RefreshStatus();
@@ -35,21 +49,45 @@ public sealed class MainForm : Form
     {
         var toolbar = new FlowLayoutPanel
         {
-            Dock = DockStyle.Top, Height = 48, Padding = new Padding(8), WrapContents = false
+            Dock = DockStyle.Top, Height = 66, Padding = new Padding(12, 14, 12, 10),
+            WrapContents = false, BackColor = Surface
         };
         toolbar.Controls.AddRange([
-            Button("Mở game", StartSelected), Button("Thêm", AddProfile), Button("Xóa", DeleteSelected),
-            Button("Cập nhật", Save), Button("Mở tất cả", StartAll), Button("Dừng tất cả", StopAll),
-            Button("Restart", RestartSelected)
+            Button("▶  Mở game", StartSelected, Accent), Button("＋  Thêm", AddProfile),
+            Button("✕  Xóa", DeleteSelected, Danger), Button("💾  Lưu", Save),
+            Button("▶▶  Mở tất cả", StartAll), Button("■  Dừng tất cả", StopAll),
+            Button("↻  Restart", RestartSelected)
         ]);
         _summary.AutoSize = true;
-        _summary.Margin = new Padding(20, 8, 0, 0);
+        _summary.ForeColor = TextMuted;
+        _summary.Font = new Font("Segoe UI Semibold", 10F);
+        _summary.Margin = new Padding(24, 8, 0, 0);
         toolbar.Controls.Add(_summary);
 
         _grid.Dock = DockStyle.Fill;
         _grid.AutoGenerateColumns = false;
         _grid.AllowUserToAddRows = false;
+        _grid.AllowUserToResizeRows = false;
         _grid.RowHeadersVisible = false;
+        _grid.BorderStyle = BorderStyle.None;
+        _grid.BackgroundColor = Surface;
+        _grid.GridColor = Border;
+        _grid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
+        _grid.EnableHeadersVisualStyles = false;
+        _grid.ColumnHeadersHeight = 42;
+        _grid.RowTemplate.Height = 42;
+        _grid.ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
+        {
+            BackColor = SurfaceLight, ForeColor = TextMain,
+            Font = new Font("Segoe UI Semibold", 9.5F), SelectionBackColor = SurfaceLight
+        };
+        _grid.DefaultCellStyle = new DataGridViewCellStyle
+        {
+            BackColor = Surface, ForeColor = TextMain,
+            SelectionBackColor = Color.FromArgb(8, 47, 73), SelectionForeColor = Color.White,
+            Font = new Font("Segoe UI", 9.5F), Padding = new Padding(5, 0, 5, 0)
+        };
+        _grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(25, 36, 54);
         _grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         _grid.MultiSelect = true;
         _grid.DataSource = _profiles;
@@ -62,7 +100,12 @@ public sealed class MainForm : Form
         _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Ram", HeaderText = "RAM", ReadOnly = true, Width = 90 });
         _grid.Columns.Add(new DataGridViewCheckBoxColumn { DataPropertyName = nameof(ClientProfile.AutoRestart), HeaderText = "Tự chạy lại", Width = 90 });
 
-        var tabs = new TabControl { Dock = DockStyle.Bottom, Height = 190 };
+        var tabs = new TabControl
+        {
+            Dock = DockStyle.Bottom, Height = 190, Appearance = TabAppearance.FlatButtons,
+            ItemSize = new Size(140, 34), SizeMode = TabSizeMode.Fixed,
+            Font = new Font("Segoe UI Semibold", 9.5F)
+        };
         tabs.TabPages.Add(Tab("Cơ bản", "Quản lý tiến trình client và hồ sơ tài khoản."));
         tabs.TabPages.Add(Tab("Cài đặt Auto", "Khối điều khiển auto sẽ được nối với client ở giai đoạn tiếp theo."));
         tabs.TabPages.Add(Tab("Nhật ký", "Nhật ký chạy client sẽ hiển thị tại đây."));
@@ -73,17 +116,28 @@ public sealed class MainForm : Form
         RefreshStatus();
     }
 
-    private static Button Button(string text, Action action)
+    private static Button Button(string text, Action action, Color? foreColor = null)
     {
-        var button = new Button { Text = text, AutoSize = true, Height = 30 };
+        var button = new Button
+        {
+            Text = text, AutoSize = true, Height = 34, Padding = new Padding(10, 0, 10, 0),
+            Margin = new Padding(0, 0, 8, 0), FlatStyle = FlatStyle.Flat,
+            BackColor = SurfaceLight, ForeColor = foreColor ?? TextMain, Cursor = Cursors.Hand
+        };
+        button.FlatAppearance.BorderColor = Border;
+        button.FlatAppearance.MouseOverBackColor = Color.FromArgb(71, 85, 105);
         button.Click += (_, _) => action();
         return button;
     }
 
     private static TabPage Tab(string title, string content)
     {
-        var page = new TabPage(title);
-        page.Controls.Add(new Label { Text = content, Dock = DockStyle.Fill, Padding = new Padding(12) });
+        var page = new TabPage(title) { BackColor = Surface, ForeColor = TextMain };
+        page.Controls.Add(new Label
+        {
+            Text = content, Dock = DockStyle.Fill, Padding = new Padding(18),
+            ForeColor = TextMuted, Font = new Font("Segoe UI", 10F)
+        });
         return page;
     }
 
@@ -145,10 +199,11 @@ public sealed class MainForm : Form
             var isRunning = process is not null;
             if (isRunning) running++;
             row.Cells["Status"].Value = isRunning ? "RUNNING" : "OFFLINE";
+            row.Cells["Status"].Style.ForeColor = isRunning ? Success : Danger;
+            row.Cells["Status"].Style.Font = new Font("Segoe UI Semibold", 9F);
             row.Cells["Ram"].Value = isRunning ? $"{process!.WorkingSet64 / 1024 / 1024} MB" : "-";
             row.Cells["Cpu"].Value = isRunning ? "ON" : "-";
         }
         _summary.Text = $"Client: {_profiles.Count} | Đang chạy: {running} | Offline: {_profiles.Count - running}";
     }
 }
-
