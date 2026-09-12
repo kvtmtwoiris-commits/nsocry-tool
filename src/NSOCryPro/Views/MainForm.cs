@@ -216,7 +216,7 @@ public sealed class MainForm : Form
         _grid.BorderStyle = BorderStyle.None;
         _grid.BackgroundColor = White;
         _grid.GridColor = Line;
-        _grid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
+        _grid.CellBorderStyle = DataGridViewCellBorderStyle.None;
         _grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         _grid.MultiSelect = true;
         _grid.EditMode = DataGridViewEditMode.EditOnEnter;
@@ -240,14 +240,19 @@ public sealed class MainForm : Form
         _grid.Columns.Add(CheckColumn(nameof(ClientProfile.Selected), "", 46));
         _grid.Columns.Add(TextColumn(nameof(ClientProfile.CharacterName), "NHÂN VẬT", 190, true));
         _grid.Columns.Add(TextColumn(nameof(ClientProfile.Account), "TÀI KHOẢN", 220, true));
-        _grid.Columns.Add(TextColumn(nameof(ClientProfile.Server), "SERVER", 115));
+        _grid.Columns.Add(TextColumn(nameof(ClientProfile.Server), "SERVER", 115, true));
         _grid.Columns.Add(TextColumn("Status", "TRẠNG THÁI", 130, true));
         _grid.Columns.Add(TextColumn("Pid", "PID", 80, true));
         _grid.Columns.Add(TextColumn("Ram", "RAM", 100, true));
         _grid.Columns.Add(CheckColumn(nameof(ClientProfile.AutoLogin), "TỰ ĐĂNG NHẬP", 120));
         _grid.Columns.Add(CheckColumn(nameof(ClientProfile.AutoRestart), "TỰ KHỞI ĐỘNG", 120));
         _grid.Columns[^1].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
-        _grid.CellPainting += PaintCheckBoxCell;
+        _grid.CellPainting += PaintGridCell;
+        _grid.RowPostPaint += (_, e) =>
+        {
+            using var line = new Pen(Line);
+            e.Graphics.DrawLine(line, e.RowBounds.Left, e.RowBounds.Bottom - 1, e.RowBounds.Right, e.RowBounds.Bottom - 1);
+        };
         _grid.CurrentCellDirtyStateChanged += (_, _) =>
         {
             if (_grid.IsCurrentCellDirty)
@@ -267,12 +272,19 @@ public sealed class MainForm : Form
         };
     }
 
-    private void PaintCheckBoxCell(object? sender, DataGridViewCellPaintingEventArgs e)
+    private void PaintGridCell(object? sender, DataGridViewCellPaintingEventArgs e)
     {
-        if (e.RowIndex < 0 || _grid.Columns[e.ColumnIndex] is not DataGridViewCheckBoxColumn)
+        if (e.RowIndex < 0)
             return;
 
-        e.PaintBackground(e.CellBounds, true);
+        if (_grid.Columns[e.ColumnIndex] is not DataGridViewCheckBoxColumn)
+        {
+            e.Paint(e.CellBounds, e.PaintParts & ~DataGridViewPaintParts.Focus & ~DataGridViewPaintParts.Border);
+            e.Handled = true;
+            return;
+        }
+
+        e.PaintBackground(e.CellBounds, false);
         const int size = 18;
         var x = e.CellBounds.Left + (e.CellBounds.Width - size) / 2;
         var y = e.CellBounds.Top + (e.CellBounds.Height - size) / 2;
@@ -553,9 +565,9 @@ public sealed class MainForm : Form
             var process = _processManager.GetProcess(profile.Id);
             var active = process is not null;
             if (active) { running++; memory += process!.WorkingSet64; }
-            row.Cells["Status"].Value = active ? "RUNNING" : "OFFLINE";
-            row.Cells["Pid"].Value = active ? process!.Id : "-";
-            row.Cells["Ram"].Value = active ? $"{process!.WorkingSet64 / 1024 / 1024} MB" : "-";
+            SetCellValue(row.Cells["Status"], active ? "RUNNING" : "OFFLINE");
+            SetCellValue(row.Cells["Pid"], active ? process!.Id : "-");
+            SetCellValue(row.Cells["Ram"], active ? $"{process!.WorkingSet64 / 1024 / 1024} MB" : "-");
         }
         _total.Text = _profiles.Count.ToString();
         _running.Text = running.ToString();
@@ -564,6 +576,11 @@ public sealed class MainForm : Form
     }
 
     private void SetStatus(string message) => _status.Text = $"{DateTime.Now:HH:mm:ss}  •  {message}";
+
+    private static void SetCellValue(DataGridViewCell cell, object value)
+    {
+        if (!Equals(cell.Value, value)) cell.Value = value;
+    }
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
