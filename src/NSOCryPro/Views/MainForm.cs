@@ -221,8 +221,8 @@ public sealed class MainForm : Form
         _grid.MultiSelect = true;
         _grid.EditMode = DataGridViewEditMode.EditOnEnter;
         _grid.EnableHeadersVisualStyles = false;
-        _grid.ColumnHeadersHeight = 44;
-        _grid.RowTemplate.Height = 44;
+        _grid.ColumnHeadersHeight = 46;
+        _grid.RowTemplate.Height = 60;
         _grid.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
         _grid.ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
         {
@@ -246,7 +246,23 @@ public sealed class MainForm : Form
         _grid.Columns.Add(TextColumn("Ram", "RAM", 100, true));
         _grid.Columns.Add(CheckColumn(nameof(ClientProfile.AutoLogin), "TỰ ĐĂNG NHẬP", 120));
         _grid.Columns.Add(CheckColumn(nameof(ClientProfile.AutoRestart), "TỰ KHỞI ĐỘNG", 120));
-        _grid.Columns[^1].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+        _grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+        foreach (DataGridViewColumn column in _grid.Columns)
+        {
+            column.FillWeight = column.Width;
+            column.MinimumWidth = column.Name == nameof(ClientProfile.Selected) ? 44 : 72;
+            column.SortMode = DataGridViewColumnSortMode.NotSortable;
+        }
+        _grid.Columns[nameof(ClientProfile.AutoLogin)].HeaderText = "Đăng nhập";
+        _grid.Columns[nameof(ClientProfile.AutoRestart)].HeaderText = "Chạy lại";
+        _grid.Columns[nameof(ClientProfile.AutoLogin)].MinimumWidth = 100;
+        _grid.Columns[nameof(ClientProfile.AutoRestart)].MinimumWidth = 90;
+        _grid.Columns["Status"].MinimumWidth = 128;
+        _grid.Columns[nameof(ClientProfile.CharacterName)].MinimumWidth = 130;
+        _grid.Columns[nameof(ClientProfile.Account)].MinimumWidth = 120;
+        _grid.Columns[nameof(ClientProfile.AutoRestart)].ReadOnly = true;
+        _grid.Columns[nameof(ClientProfile.AutoRestart)].HeaderCell.ToolTipText = "Tự khởi động lại chưa được triển khai.";
+        _grid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
         _grid.CellPainting += PaintGridCell;
         _grid.RowPostPaint += (_, e) =>
         {
@@ -268,52 +284,84 @@ public sealed class MainForm : Form
         };
         _grid.CellDoubleClick += (_, e) =>
         {
-            if (e.RowIndex >= 0) EditSelected();
+            if (e.RowIndex >= 0 && _grid.Columns[e.ColumnIndex] is not DataGridViewCheckBoxColumn) EditSelected();
         };
     }
 
     private void PaintGridCell(object? sender, DataGridViewCellPaintingEventArgs e)
     {
-        if (e.RowIndex < 0)
-            return;
-
-        if (_grid.Columns[e.ColumnIndex] is not DataGridViewCheckBoxColumn)
+        if (e.ColumnIndex < 0 || e.Graphics is null) return;
+        var g = e.Graphics;
+        var saved = g.Save();
+        try
         {
-            e.Paint(e.CellBounds, e.PaintParts & ~DataGridViewPaintParts.Focus & ~DataGridViewPaintParts.Border);
-            e.Handled = true;
-            return;
-        }
+            g.SetClip(e.CellBounds);
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            float scale = _grid.DeviceDpi / 96f;
+            int D(float value) => Math.Max(1, (int)Math.Round(value * scale));
+            var column = _grid.Columns[e.ColumnIndex];
+            var bounds = e.CellBounds;
+            bool selected = (e.State & DataGridViewElementStates.Selected) != 0;
+            var background = e.RowIndex < 0 ? Color.FromArgb(248, 250, 252) : selected ? BlueSoft : White;
+            using var brush = new SolidBrush(background);
+            g.FillRectangle(brush, bounds);
 
-        e.PaintBackground(e.CellBounds, false);
-        const int size = 18;
-        var x = e.CellBounds.Left + (e.CellBounds.Width - size) / 2;
-        var y = e.CellBounds.Top + (e.CellBounds.Height - size) / 2;
-        var box = new Rectangle(x, y, size, size);
-        var isChecked = e.FormattedValue is bool value && value;
-
-        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-        using var path = RoundedRectangle(box, 5);
-        using var fill = new SolidBrush(isChecked ? Blue : White);
-        using var border = new Pen(isChecked ? Blue : Color.FromArgb(203, 213, 225), 1.4F);
-        e.Graphics.FillPath(fill, path);
-        e.Graphics.DrawPath(border, path);
-
-        if (isChecked)
-        {
-            using var tick = new Pen(White, 2F)
+            if (e.RowIndex < 0)
             {
-                StartCap = LineCap.Round,
-                EndCap = LineCap.Round,
-                LineJoin = LineJoin.Round
-            };
-            e.Graphics.DrawLines(tick,
-            [
-                new PointF(x + 4.5F, y + 9.5F),
-                new PointF(x + 7.5F, y + 12.5F),
-                new PointF(x + 13.5F, y + 5.5F)
-            ]);
+                var caption = column.HeaderText;
+                var headerBounds = Rectangle.Inflate(bounds, -D(12), 0);
+                var flags = TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix;
+                if (column is DataGridViewCheckBoxColumn) flags |= TextFormatFlags.HorizontalCenter;
+                TextRenderer.DrawText(g, caption, _grid.ColumnHeadersDefaultCellStyle.Font,
+                    headerBounds, Muted, flags);
+            }
+            else if (column is DataGridViewCheckBoxColumn)
+            {
+                bool unavailable = column.Name == nameof(ClientProfile.AutoRestart);
+                bool check = !unavailable && e.FormattedValue is bool value && value;
+                int size = D(18);
+                var box = new Rectangle(bounds.X + (bounds.Width - size) / 2,
+                    bounds.Y + (bounds.Height - size) / 2, size, size);
+                using var shape = RoundedRectangle(box, D(5));
+                using var fill = new SolidBrush(unavailable ? Bg : check ? Blue : White);
+                using var pen = new Pen(check ? Blue : Color.FromArgb(203, 213, 225), scale);
+                g.FillPath(fill, shape);
+                g.DrawPath(pen, shape);
+                if (check)
+                {
+                    using var tick = new Pen(White, 2 * scale) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+                    g.DrawLines(tick, new PointF[] {
+                        new(box.X + 4 * scale, box.Y + 9 * scale),
+                        new(box.X + 8 * scale, box.Y + 13 * scale),
+                        new(box.X + 14 * scale, box.Y + 5 * scale) });
+                }
+            }
+            else if (column.Name == "Status")
+            {
+                bool active = Equals(e.Value, "RUNNING");
+                var pill = new Rectangle(bounds.X + D(12), bounds.Y + (bounds.Height - D(26)) / 2,
+                    Math.Min(D(108), bounds.Width - D(24)), D(26));
+                using var shape = RoundedRectangle(pill, D(13));
+                using var fill = new SolidBrush(active ? GreenSoft : Bg);
+                g.FillPath(fill, shape);
+                TextRenderer.DrawText(g, active ? "Đang chạy" : "Đã dừng", _grid.Font,
+                    pill, active ? Green : Muted,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+            }
+            else
+            {
+                var value = Convert.ToString(e.FormattedValue);
+                if (string.IsNullOrWhiteSpace(value)) value = "—";
+                var textBounds = Rectangle.Inflate(bounds, -D(12), 0);
+                TextRenderer.DrawText(g, value, _grid.Font, textBounds,
+                    column.Name == nameof(ClientProfile.CharacterName) ? Navy : Muted,
+                    TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+            }
+            using var divider = new Pen(Line);
+            g.DrawLine(divider, bounds.Left, bounds.Bottom - 1, bounds.Right, bounds.Bottom - 1);
+            e.Handled = true;
         }
-        e.Handled = true;
+        finally { g.Restore(saved); }
     }
 
     private static GraphicsPath RoundedRectangle(Rectangle rectangle, int radius)
