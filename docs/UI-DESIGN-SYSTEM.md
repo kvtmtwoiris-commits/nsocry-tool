@@ -62,7 +62,7 @@
 
 ### Bảng client
 
-- Header và row cao 44 px.
+- Header cao 46 px; hàng dữ liệu cao 60 px (đơn vị thiết kế tại DPI 100%).
 - Header nền #F8FAFC, chữ uppercase 8.5 pt.
 - Dữ liệu Segoe UI 9.5 pt.
 - Chỉ dùng đường kẻ ngang.
@@ -70,7 +70,7 @@
 - Không hiển thị focus rectangle quanh cell hiện tại; selection áp dụng cho toàn hàng.
 - Timer không được gán lại giá trị cell khi dữ liệu không thay đổi để tránh nhấp nháy.
 - Row được chọn dùng nền blue soft.
-- RUNNING màu success; OFFLINE màu error.
+- Trạng thái tiến trình: Đang chạy dùng nhãn xanh nhạt; Đã dừng dùng nhãn xám. Không diễn giải thành trạng thái đăng nhập.
 
 ### Checkbox
 
@@ -114,3 +114,12 @@
 - [ ] Nút primary/danger đúng vai trò.
 - [ ] Bảng không nhấp nháy khi cập nhật trạng thái.
 - [ ] GitHub Actions build thành công.
+
+## Bảng tài khoản — bản tinh chỉnh
+
+- Vẽ thống nhất toàn bộ cell, kể cả header; không gọi trình vẽ viền mặc định.
+- Cột co giãn theo tỷ trọng, có chiều rộng tối thiểu; cho phép cuộn ngang khi không đủ chỗ.
+- Nhãn cột ngắn: Đăng nhập, Chạy lại; checkbox căn giữa và scale theo DPI.
+- Cột Chạy lại tạm chỉ đọc, hiển thị mờ cho đến khi có logic thực thi.
+- Nhãn trạng thái cao 26 px, bo tròn 13 px; nội dung hàng có padding ngang 12 px.
+- Kiểm tra trực quan trên Windows vẫn cần thiết; build thành công không thay thế kiểm tra hiển thị.
