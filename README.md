@@ -8,6 +8,7 @@ Tool quản lý nhiều client NSO trên Windows, sử dụng MicroEmulator và 
 - Mở một hoặc nhiều client cùng lúc.
 - Dừng và khởi động lại client.
 - Tách dữ liệu RMS theo từng hồ sơ.
+- Mọi hồ sơ luôn mở bằng Resizable device với vùng game 320 × 320.
 - Theo dõi trạng thái và RAM của từng tiến trình.
 - Lưu danh sách hồ sơ tự động.
 
