@@ -84,6 +84,14 @@
 - Tab cao 34 px, rộng 150 px.
 - Footer chỉ chứa trạng thái gần nhất bên trái và phiên bản bên phải.
 
+### Hộp thoại hồ sơ
+
+- Thêm và sửa tài khoản phải thực hiện trong ProfileDialog.
+- Mật khẩu luôn dùng ký tự che; không hiển thị trong bảng client.
+- Tùy chọn Tự đăng nhập và Tự khởi động lại đặt ngay dưới nhóm thông tin.
+- Nút Lưu hồ sơ dùng primary blue; nút Hủy dùng secondary.
+- Mật khẩu chỉ được lưu sau khi mã hóa bằng Windows DPAPI cho tài khoản Windows hiện tại.
+
 ## 5. Quy tắc đồng bộ
 
 - Mọi màu phải lấy từ palette, không thêm màu gần giống.
