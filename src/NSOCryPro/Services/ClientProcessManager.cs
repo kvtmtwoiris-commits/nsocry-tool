@@ -5,6 +5,9 @@ namespace NSOCryPro.Services;
 
 public sealed class ClientProcessManager : IDisposable
 {
+    private const int GameWidth = 320;
+    private const int GameHeight = 320;
+    private const string ResizableDevice = "org/microemu/device/resizable/device.xml";
     private readonly string _runtimeDirectory;
     private readonly Dictionary<Guid, Process> _processes = [];
 
@@ -30,7 +33,9 @@ public sealed class ClientProcessManager : IDisposable
         var startInfo = new ProcessStartInfo
         {
             FileName = "javaw.exe",
-            Arguments = $"-Duser.home=\"{profileHome}\" -cp \"{classPath}\" org.microemu.app.Main GameMidlet",
+            Arguments = $"-Duser.home=\"{profileHome}\" -cp \"{classPath}\" " +
+                        $"org.microemu.app.Main --device {ResizableDevice} " +
+                        $"--resizableDevice {GameWidth} {GameHeight} GameMidlet",
             WorkingDirectory = _runtimeDirectory,
             UseShellExecute = false,
             CreateNoWindow = false
@@ -70,4 +75,3 @@ public sealed class ClientProcessManager : IDisposable
         foreach (var id in _processes.Keys.ToArray()) Stop(id);
     }
 }
-
