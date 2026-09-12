@@ -29,7 +29,8 @@ public sealed class ProfileDialog : Form
         _password.UseSystemPasswordChar = true;
         _character.Text = profile.CharacterName;
         _server.Text = profile.Server;
-        _autoLogin.Text = "Tự động đăng nhập sau khi mở game";
+        _autoLogin.Text = "Tự đăng nhập (đang tích hợp cầu nối)";
+        _autoLogin.Enabled = false;
         _autoLogin.Checked = profile.AutoLogin;
         _autoLogin.AutoSize = true;
         _autoRestart.Text = "Tự khởi động lại khi client bị đóng";

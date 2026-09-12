@@ -70,7 +70,7 @@
 - Không hiển thị focus rectangle quanh cell hiện tại; selection áp dụng cho toàn hàng.
 - Timer không được gán lại giá trị cell khi dữ liệu không thay đổi để tránh nhấp nháy.
 - Row được chọn dùng nền blue soft.
-- Trạng thái tiến trình: Đang chạy dùng nhãn xanh nhạt; Đã dừng dùng nhãn xám. Không diễn giải thành trạng thái đăng nhập.
+- Trạng thái lấy từ cầu nối JVM: Menu, Tài khoản, Chọn nhân vật, Màn hình game, Có hộp thoại. Màn hình game dùng nhãn xanh nhạt; các trạng thái còn lại dùng xám. Chờ cầu nối/mất cầu nối phải hiển thị riêng. Không diễn giải thành Online trên server.
 
 ### Checkbox
 
@@ -110,7 +110,7 @@
 - [ ] Hiển thị tốt ở 100%, 125% và 150% DPI.
 - [ ] Không có control bị cắt ở kích thước tối thiểu.
 - [ ] Checkbox 18 px và nằm đúng giữa cell.
-- [ ] Màu RUNNING/OFFLINE đúng chuẩn.
+- [ ] Trạng thái cầu nối đúng với màn hình; không suy ra Online từ tiến trình Java.
 - [ ] Nút primary/danger đúng vai trò.
 - [ ] Bảng không nhấp nháy khi cập nhật trạng thái.
 - [ ] GitHub Actions build thành công.
@@ -123,3 +123,10 @@
 - Cột Chạy lại tạm chỉ đọc, hiển thị mờ cho đến khi có logic thực thi.
 - Nhãn trạng thái cao 26 px, bo tròn 13 px; nội dung hàng có padding ngang 12 px.
 - Kiểm tra trực quan trên Windows vẫn cần thiết; build thành công không thay thế kiểm tra hiển thị.
+
+
+## Cầu nối client v1
+
+- Cột trạng thái tối thiểu 155 px, nhãn dùng phần rộng còn lại sau padding; tooltip có lớp màn hình và danh sách nhân vật.
+- Tự đăng nhập tạm vô hiệu trong bảng và hộp thoại hồ sơ cho tới khi adapter ghi được kiểm chứng; giữ cấu hình đã lưu.
+- Chi tiết giao thức, ánh xạ và giới hạn ở [CLIENT-BRIDGE.md](CLIENT-BRIDGE.md).

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/NSOCryPro/Services/ClientBridgeSession.cs" Link="ClientBridgeSession.cs" />
+    <EmbeddedResource Include="../../src/NSOCryPro/Resources/bridge.jar.b64" LogicalName="NSOCryPro.BridgeBase64" />
+  </ItemGroup>
+</Project>

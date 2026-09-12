@@ -1,7 +1,5 @@
 using System.ComponentModel;
 using System.Drawing.Drawing2D;
-using System.Runtime.InteropServices;
-using System.Text;
 using NSOCryPro.Models;
 using NSOCryPro.Services;
 
@@ -34,7 +32,6 @@ public sealed class MainForm : Form
     private readonly Label _memory = MetricValue();
     private readonly Label _status = new();
     private readonly System.Windows.Forms.Timer _timer = new() { Interval = 1500 };
-    private readonly List<System.Windows.Forms.Timer> _loginTimers = [];
 
     public MainForm(JsonProfileStore store, ClientProcessManager processManager)
     {
@@ -56,8 +53,6 @@ public sealed class MainForm : Form
         _timer.Start();
         FormClosing += (_, _) =>
         {
-            foreach (var loginTimer in _loginTimers.ToArray()) loginTimer.Dispose();
-            _loginTimers.Clear();
             Save();
             _processManager.Dispose();
         };
@@ -257,7 +252,9 @@ public sealed class MainForm : Form
         _grid.Columns[nameof(ClientProfile.AutoRestart)].HeaderText = "Chạy lại";
         _grid.Columns[nameof(ClientProfile.AutoLogin)].MinimumWidth = 100;
         _grid.Columns[nameof(ClientProfile.AutoRestart)].MinimumWidth = 90;
-        _grid.Columns["Status"].MinimumWidth = 128;
+        _grid.Columns["Status"].MinimumWidth = 155;
+        _grid.Columns[nameof(ClientProfile.AutoLogin)].ReadOnly = true;
+        _grid.Columns[nameof(ClientProfile.AutoLogin)].HeaderCell.ToolTipText = "Đang tích hợp đăng nhập trực tiếp; chưa tự gửi tài khoản/mật khẩu.";
         _grid.Columns[nameof(ClientProfile.CharacterName)].MinimumWidth = 130;
         _grid.Columns[nameof(ClientProfile.Account)].MinimumWidth = 120;
         _grid.Columns[nameof(ClientProfile.AutoRestart)].ReadOnly = true;
@@ -273,14 +270,6 @@ public sealed class MainForm : Form
         {
             if (_grid.IsCurrentCellDirty)
                 _grid.CommitEdit(DataGridViewDataErrorContexts.Commit);
-        };
-        _grid.CellFormatting += (_, e) =>
-        {
-            if (_grid.Columns[e.ColumnIndex].Name != "Status" || e.Value is not string state) return;
-            var style = e.CellStyle;
-            if (style is null) return;
-            style.ForeColor = state == "RUNNING" ? Green : Red;
-            style.Font = new Font("Segoe UI Semibold", 9F);
         };
         _grid.CellDoubleClick += (_, e) =>
         {
@@ -317,7 +306,7 @@ public sealed class MainForm : Form
             }
             else if (column is DataGridViewCheckBoxColumn)
             {
-                bool unavailable = column.Name == nameof(ClientProfile.AutoRestart);
+                bool unavailable = column.Name == nameof(ClientProfile.AutoRestart) || column.Name == nameof(ClientProfile.AutoLogin);
                 bool check = !unavailable && e.FormattedValue is bool value && value;
                 int size = D(18);
                 var box = new Rectangle(bounds.X + (bounds.Width - size) / 2,
@@ -338,15 +327,15 @@ public sealed class MainForm : Form
             }
             else if (column.Name == "Status")
             {
-                bool active = Equals(e.Value, "RUNNING");
+                bool active = Equals(e.Value, "Màn hình game");
                 var pill = new Rectangle(bounds.X + D(12), bounds.Y + (bounds.Height - D(26)) / 2,
-                    Math.Min(D(108), bounds.Width - D(24)), D(26));
+                    bounds.Width - D(24), D(26));
                 using var shape = RoundedRectangle(pill, D(13));
                 using var fill = new SolidBrush(active ? GreenSoft : Bg);
                 g.FillPath(fill, shape);
-                TextRenderer.DrawText(g, active ? "Đang chạy" : "Đã dừng", _grid.Font,
+                TextRenderer.DrawText(g, Convert.ToString(e.Value) ?? "Chờ cầu nối", _grid.Font,
                     pill, active ? Green : Muted,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
             }
             else
             {
@@ -553,55 +542,7 @@ public sealed class MainForm : Form
         _store.Save(_profiles);
     }
 
-    private void StartProfile(ClientProfile profile)
-    {
-        _processManager.Start(profile);
-        if (!profile.AutoLogin || string.IsNullOrWhiteSpace(profile.Account))
-            return;
-
-        var password = CredentialProtector.Unprotect(profile.EncryptedPassword);
-        if (string.IsNullOrEmpty(password))
-            return;
-
-        var loginTimer = new System.Windows.Forms.Timer { Interval = 3500 };
-        loginTimer.Tick += (_, _) =>
-        {
-            loginTimer.Stop();
-            _loginTimers.Remove(loginTimer);
-            loginTimer.Dispose();
-
-            var process = _processManager.GetProcess(profile.Id);
-            if (process is null) return;
-            process.Refresh();
-            if (process.MainWindowHandle == IntPtr.Zero)
-            {
-                SetStatus($"Không tìm thấy cửa sổ để đăng nhập {profile.Account}");
-                return;
-            }
-
-            SetForegroundWindow(process.MainWindowHandle);
-            SendKeys.SendWait(EscapeSendKeys(profile.Account));
-            SendKeys.SendWait("{TAB}");
-            SendKeys.SendWait(EscapeSendKeys(password));
-            SendKeys.SendWait("{ENTER}");
-            SetStatus($"Đã gửi đăng nhập cho {profile.Account}");
-        };
-        _loginTimers.Add(loginTimer);
-        loginTimer.Start();
-    }
-
-    private static string EscapeSendKeys(string value)
-    {
-        var escaped = new StringBuilder(value.Length);
-        foreach (var character in value)
-        {
-            if ("{}+^%~()[]".Contains(character))
-                escaped.Append('{').Append(character).Append('}');
-            else
-                escaped.Append(character);
-        }
-        return escaped.ToString();
-    }
+    private void StartProfile(ClientProfile profile) => _processManager.Start(profile);
 
     private void RefreshStatus()
     {
@@ -613,7 +554,10 @@ public sealed class MainForm : Form
             var process = _processManager.GetProcess(profile.Id);
             var active = process is not null;
             if (active) { running++; memory += process!.WorkingSet64; }
-            SetCellValue(row.Cells["Status"], active ? "RUNNING" : "OFFLINE");
+            SetCellValue(row.Cells["Status"], _processManager.GetStateLabel(profile.Id));
+            var snapshot = _processManager.GetSnapshot(profile.Id);
+            row.Cells["Status"].ToolTipText = snapshot is null ? "Đang chờ dữ liệu trực tiếp từ giả lập."
+                : $"{_processManager.GetStateLabel(profile.Id)}\nLớp màn hình: {snapshot.Screen}\nNhân vật: {snapshot.Characters.Replace('\n', ',')}\nTrạng thái màn hình không thay thế xác nhận kết nối từ server.";
             SetCellValue(row.Cells["Pid"], active ? process!.Id : "-");
             SetCellValue(row.Cells["Ram"], active ? $"{process!.WorkingSet64 / 1024 / 1024} MB" : "-");
         }
@@ -630,9 +574,7 @@ public sealed class MainForm : Form
         if (!Equals(cell.Value, value)) cell.Value = value;
     }
 
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetForegroundWindow(IntPtr windowHandle);
+
 
     private enum ButtonStyle { Primary, Normal, Danger }
 

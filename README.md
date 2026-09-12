@@ -52,3 +52,9 @@ Trước lần build đầu tiên, đặt `microemulator.jar` và `game.jar` tro
 ## Tài liệu giao diện
 
 Mọi thay đổi GUI phải tuân theo [NSOCry Pro UI Design System](docs/UI-DESIGN-SYSTEM.md).
+
+## Cầu nối trực tiếp với client
+
+Bản hiện tại dùng Java agent để đọc màn hình và danh sách nhân vật trực tiếp từ JVM. Agent được đóng gói sẵn; cập nhật bằng `Update-Build.bat`, đóng/mở lại game để nạp agent. Giữ Resizable 500×300. Di chuột lên trạng thái để xem lớp màn hình và tên nhân vật.
+
+Đây là bản đọc trạng thái: tự đăng nhập bằng SendKeys đã được bỏ; tự đăng nhập trực tiếp chưa bật. Mật khẩu đã lưu vẫn được giữ. Client khác phiên bản tham chiếu báo **Client chưa hỗ trợ**. **Màn hình game** chưa phải xác nhận nhân vật online trên server. Xem [tài liệu cầu nối](docs/CLIENT-BRIDGE.md).
