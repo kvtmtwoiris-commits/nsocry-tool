@@ -1,5 +1,7 @@
 using System.ComponentModel;
 using System.Drawing.Drawing2D;
+using System.Runtime.InteropServices;
+using System.Text;
 using NSOCryPro.Models;
 using NSOCryPro.Services;
 
@@ -32,6 +34,7 @@ public sealed class MainForm : Form
     private readonly Label _memory = MetricValue();
     private readonly Label _status = new();
     private readonly System.Windows.Forms.Timer _timer = new() { Interval = 1500 };
+    private readonly List<System.Windows.Forms.Timer> _loginTimers = [];
 
     public MainForm(JsonProfileStore store, ClientProcessManager processManager)
     {
@@ -51,7 +54,13 @@ public sealed class MainForm : Form
         BuildUi();
         _timer.Tick += (_, _) => RefreshStatus();
         _timer.Start();
-        FormClosing += (_, _) => { Save(); _processManager.Dispose(); };
+        FormClosing += (_, _) =>
+        {
+            foreach (var loginTimer in _loginTimers.ToArray()) loginTimer.Dispose();
+            _loginTimers.Clear();
+            Save();
+            _processManager.Dispose();
+        };
     }
 
     private void BuildUi()
@@ -173,6 +182,7 @@ public sealed class MainForm : Form
         flow.Controls.AddRange([
             Button("Mở game", StartSelected, ButtonStyle.Primary),
             Button("Thêm hồ sơ", AddProfile, ButtonStyle.Normal),
+            Button("Sửa hồ sơ", EditSelected, ButtonStyle.Normal),
             Button("Xóa", DeleteSelected, ButtonStyle.Danger),
             Separator(),
             Button("Mở tất cả", StartAll, ButtonStyle.Normal),
@@ -228,12 +238,13 @@ public sealed class MainForm : Form
         };
         _grid.DataSource = _profiles;
         _grid.Columns.Add(CheckColumn(nameof(ClientProfile.Selected), "", 46));
-        _grid.Columns.Add(TextColumn(nameof(ClientProfile.CharacterName), "NHÂN VẬT", 190));
-        _grid.Columns.Add(TextColumn(nameof(ClientProfile.Account), "TÀI KHOẢN", 220));
+        _grid.Columns.Add(TextColumn(nameof(ClientProfile.CharacterName), "NHÂN VẬT", 190, true));
+        _grid.Columns.Add(TextColumn(nameof(ClientProfile.Account), "TÀI KHOẢN", 220, true));
         _grid.Columns.Add(TextColumn(nameof(ClientProfile.Server), "SERVER", 115));
         _grid.Columns.Add(TextColumn("Status", "TRẠNG THÁI", 130, true));
         _grid.Columns.Add(TextColumn("Pid", "PID", 80, true));
         _grid.Columns.Add(TextColumn("Ram", "RAM", 100, true));
+        _grid.Columns.Add(CheckColumn(nameof(ClientProfile.AutoLogin), "TỰ ĐĂNG NHẬP", 120));
         _grid.Columns.Add(CheckColumn(nameof(ClientProfile.AutoRestart), "TỰ KHỞI ĐỘNG", 120));
         _grid.Columns[^1].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
         _grid.CellPainting += PaintCheckBoxCell;
@@ -249,6 +260,10 @@ public sealed class MainForm : Form
             if (style is null) return;
             style.ForeColor = state == "RUNNING" ? Green : Red;
             style.Font = new Font("Segoe UI Semibold", 9F);
+        };
+        _grid.CellDoubleClick += (_, e) =>
+        {
+            if (e.RowIndex >= 0) EditSelected();
         };
     }
 
@@ -411,9 +426,27 @@ public sealed class MainForm : Form
 
     private void AddProfile()
     {
-        _profiles.Add(new ClientProfile { Account = $"account{_profiles.Count + 1}" });
+        var profile = new ClientProfile();
+        using var dialog = new ProfileDialog(profile);
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        _profiles.Add(profile);
         Save();
         SetStatus("Đã thêm hồ sơ mới");
+    }
+
+    private void EditSelected()
+    {
+        var profile = _grid.CurrentRow?.DataBoundItem as ClientProfile;
+        if (profile is null)
+        {
+            SetStatus("Hãy chọn một hồ sơ để chỉnh sửa");
+            return;
+        }
+        using var dialog = new ProfileDialog(profile);
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        _grid.Refresh();
+        Save();
+        SetStatus("Đã cập nhật hồ sơ");
     }
 
     private void DeleteSelected()
@@ -427,8 +460,8 @@ public sealed class MainForm : Form
         SetStatus("Đã xóa hồ sơ được chọn");
     }
 
-    private void StartSelected() => RunFor(SelectedProfiles(), _processManager.Start, "Đã mở client được chọn");
-    private void StartAll() => RunFor(_profiles, _processManager.Start, "Đã mở tất cả client");
+    private void StartSelected() => RunFor(SelectedProfiles(), StartProfile, "Đã mở client được chọn");
+    private void StartAll() => RunFor(_profiles, StartProfile, "Đã mở tất cả client");
     private void RestartSelected() => RunFor(SelectedProfiles(), _processManager.Restart, "Đã khởi động lại client");
 
     private void StopAll()
@@ -460,6 +493,56 @@ public sealed class MainForm : Form
         _store.Save(_profiles);
     }
 
+    private void StartProfile(ClientProfile profile)
+    {
+        _processManager.Start(profile);
+        if (!profile.AutoLogin || string.IsNullOrWhiteSpace(profile.Account))
+            return;
+
+        var password = CredentialProtector.Unprotect(profile.EncryptedPassword);
+        if (string.IsNullOrEmpty(password))
+            return;
+
+        var loginTimer = new System.Windows.Forms.Timer { Interval = 3500 };
+        loginTimer.Tick += (_, _) =>
+        {
+            loginTimer.Stop();
+            _loginTimers.Remove(loginTimer);
+            loginTimer.Dispose();
+
+            var process = _processManager.GetProcess(profile.Id);
+            if (process is null) return;
+            process.Refresh();
+            if (process.MainWindowHandle == IntPtr.Zero)
+            {
+                SetStatus($"Không tìm thấy cửa sổ để đăng nhập {profile.Account}");
+                return;
+            }
+
+            SetForegroundWindow(process.MainWindowHandle);
+            SendKeys.SendWait(EscapeSendKeys(profile.Account));
+            SendKeys.SendWait("{TAB}");
+            SendKeys.SendWait(EscapeSendKeys(password));
+            SendKeys.SendWait("{ENTER}");
+            SetStatus($"Đã gửi đăng nhập cho {profile.Account}");
+        };
+        _loginTimers.Add(loginTimer);
+        loginTimer.Start();
+    }
+
+    private static string EscapeSendKeys(string value)
+    {
+        var escaped = new StringBuilder(value.Length);
+        foreach (var character in value)
+        {
+            if ("{}+^%~()[]".Contains(character))
+                escaped.Append('{').Append(character).Append('}');
+            else
+                escaped.Append(character);
+        }
+        return escaped.ToString();
+    }
+
     private void RefreshStatus()
     {
         var running = 0;
@@ -481,6 +564,10 @@ public sealed class MainForm : Form
     }
 
     private void SetStatus(string message) => _status.Text = $"{DateTime.Now:HH:mm:ss}  •  {message}";
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetForegroundWindow(IntPtr windowHandle);
 
     private enum ButtonStyle { Primary, Normal, Danger }
 
