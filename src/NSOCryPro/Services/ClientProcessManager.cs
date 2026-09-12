@@ -5,8 +5,8 @@ namespace NSOCryPro.Services;
 
 public sealed class ClientProcessManager : IDisposable
 {
-    private const int GameWidth = 320;
-    private const int GameHeight = 320;
+    private const int GameWidth = 500;
+    private const int GameHeight = 300;
     private const string ResizableDevice = "org/microemu/device/resizable/device.xml";
     private readonly string _runtimeDirectory;
     private readonly Dictionary<Guid, Process> _processes = [];
