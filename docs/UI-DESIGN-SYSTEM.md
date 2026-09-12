@@ -66,6 +66,9 @@
 - Header nền #F8FAFC, chữ uppercase 8.5 pt.
 - Dữ liệu Segoe UI 9.5 pt.
 - Chỉ dùng đường kẻ ngang.
+- Tuyệt đối không vẽ viền dọc giữa các cell.
+- Không hiển thị focus rectangle quanh cell hiện tại; selection áp dụng cho toàn hàng.
+- Timer không được gán lại giá trị cell khi dữ liệu không thay đổi để tránh nhấp nháy.
 - Row được chọn dùng nền blue soft.
 - RUNNING màu success; OFFLINE màu error.
 
