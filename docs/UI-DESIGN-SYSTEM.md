@@ -128,5 +128,5 @@
 ## Cầu nối client v1
 
 - Cột trạng thái tối thiểu 155 px, nhãn dùng phần rộng còn lại sau padding; tooltip có lớp màn hình và danh sách nhân vật.
-- Tự đăng nhập tạm vô hiệu trong bảng và hộp thoại hồ sơ cho tới khi adapter ghi được kiểm chứng; giữ cấu hình đã lưu.
+- Tự đăng nhập bật/tắt được trong bảng và hộp thoại hồ sơ; tooltip trạng thái hiển thị tiến độ gửi login/chọn nhân vật.
 - Chi tiết giao thức, ánh xạ và giới hạn ở [CLIENT-BRIDGE.md](CLIENT-BRIDGE.md).

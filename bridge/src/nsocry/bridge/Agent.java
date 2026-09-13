@@ -7,8 +7,15 @@ import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
-/** Original NSOCry Pro code. Read-only adapter; does not modify game bytecode. */
+/** Original NSOCry Pro code. Version-pinned adapter; does not modify game bytecode. */
 public final class Agent {
+    private static volatile String account;
+    private static volatile String password;
+    private static volatile String character;
+    private static volatile String automation = "IDLE";
+    private static volatile boolean loginSent;
+    private static volatile boolean accountFilled;
+    private static volatile boolean characterSent;
     public static void premain(String ignored, final Instrumentation instrumentation) {
         final String token = System.getenv("NSOCRY_BRIDGE_TOKEN");
         final String port = System.getenv("NSOCRY_BRIDGE_PORT");
@@ -27,18 +34,34 @@ public final class Agent {
                         // Only one bounded request at a time; tool controls polling frequency.
                         String command = readCommand(input);
                         if (command == null) return;
+                        if (command.startsWith("LOGIN\t")) {
+                            String[] values = command.split("\t", -1);
+                            if (values.length != 4) return;
+                            account = decode(values[1]);
+                            password = decode(values[2]);
+                            character = decode(values[3]);
+                            if (account.length() == 0 || password.length() == 0
+                                    || account.length() > 100 || password.length() > 100 || character.length() > 100) return;
+                            automation = "READY";
+                            output.println("ACK");
+                            continue;
+                        }
                         if (!"POLL".equals(command)) return;
                         String[] state;
                         try {
                             state = supported ? inspect(instrumentation.getAllLoadedClasses())
-                                    : new String[] {"UNSUPPORTED", "", ""};
+                                    : new String[] {"UNSUPPORTED", "", "", "DISABLED"};
+                            if (supported && account != null) automate(state, instrumentation.getAllLoadedClasses());
                         } catch (Exception ex) {
                             // Never serialize exception messages or arbitrary game fields: they may contain secrets.
-                            state = new String[] {"ADAPTER_ERROR", "", ""};
+                            automation = "ERROR";
+                            state = new String[] {"ADAPTER_ERROR", "", "", automation};
                         } catch (LinkageError ex) {
-                            state = new String[] {"ADAPTER_ERROR", "", ""};
+                            automation = "ERROR";
+                            state = new String[] {"ADAPTER_ERROR", "", "", automation};
                         }
-                        output.println("STATE\t" + state[0] + "\t" + encode(state[1]) + "\t" + encode(state[2]));
+                        output.println("STATE\t" + state[0] + "\t" + encode(state[1]) + "\t" + encode(state[2])
+                                + "\t" + encode(state[3]));
                         if (output.checkError()) return;
                     }
                 } catch (Exception ex) {
@@ -52,7 +75,7 @@ public final class Agent {
 
     private static String readCommand(Reader input) throws IOException {
         StringBuilder s = new StringBuilder();
-        for (int i = 0; i < 32; i++) {
+        for (int i = 0; i < 8192; i++) {
             int c = input.read();
             if (c == -1) return null;
             if (c == '\n') return s.toString();
@@ -65,12 +88,12 @@ public final class Agent {
         Class<?> canvas = null;
         // Do not Class.forName an uninitialized client: use only classes already loaded by its MIDlet loader.
         for (Class<?> c : loaded) if (c.getName().equals("aY")) {
-            if (canvas != null && canvas != c) return new String[] {"ADAPTER_ERROR", "", ""};
+            if (canvas != null && canvas != c) return new String[] {"ADAPTER_ERROR", "", "", automation};
             canvas = c;
         }
-        if (canvas == null) return new String[] {"STARTING", "", ""};
+        if (canvas == null) return new String[] {"STARTING", "", "", automation};
         Object screen = field(canvas, "a", "dr").get(null);
-        if (screen == null) return new String[] {"STARTING", "", ""};
+        if (screen == null) return new String[] {"STARTING", "", "", automation};
         String name = screen.getClass().getName();
         // aY.a:dr is the screen rendered by aY.a(Graphics), verified in the supplied client.
         String phase = name.equals("cI") ? "MENU" : name.equals("bJ") ? "ACCOUNT_SCREEN"
@@ -93,8 +116,84 @@ public final class Agent {
         Object dialog = field(canvas, "a", "aq").get(null);
         if (dialog != null) phase = "DIALOG";
         // A transition during this sample invalidates the whole snapshot.
-        if (field(canvas, "a", "dr").get(null) != screen) return new String[] {"TRANSITION", "", ""};
-        return new String[] {phase, name, characters};
+        if (field(canvas, "a", "dr").get(null) != screen) return new String[] {"TRANSITION", "", "", automation};
+        return new String[] {phase, name, characters, automation};
+    }
+
+    static void automate(String[] state, Class<?>[] loaded) throws Exception {
+        if ("DIALOG".equals(state[0]) || "TRANSITION".equals(state[0])) return;
+        final Class<?> canvas = find(loaded, "aY");
+        final Object screen = field(canvas, "a", "dr").get(null);
+        if ("MENU".equals(state[0]) && !loginSent) {
+            // cI.a(1003,Object) copies pending p/q to saved K/n, persists RMS and calls cK.c(login).
+            field(screen.getClass(), "p", "java.lang.String").set(null, account);
+            field(screen.getClass(), "q", "java.lang.String").set(null, password);
+            loginSent = true;
+            automation = "LOGIN_SENT";
+            invokeOnGameThread(loaded, new Runnable() { public void run() {
+                try { action(screen, 1003); } catch (Exception ex) { automation = "ERROR"; }
+            }});
+        } else if ("ACCOUNT_SCREEN".equals(state[0]) && !loginSent && !accountFilled) {
+            // Some RMS states open bJ directly. Fill its two visible inputs, then action 2000 returns to menu.
+            Object accountInput = field(screen.getClass(), "e", "db").get(screen);
+            Object passwordInput = field(screen.getClass(), "f", "db").get(screen);
+            method(accountInput.getClass(), "ah", String.class).invoke(accountInput, account);
+            method(passwordInput.getClass(), "ah", String.class).invoke(passwordInput, password);
+            accountFilled = true;
+            automation = "ACCOUNT_FILLED";
+            invokeOnGameThread(loaded, new Runnable() { public void run() {
+                try { action(screen, 2000); } catch (Exception ex) { automation = "ERROR"; }
+            }});
+        } else if ("CHARACTER_SELECT".equals(state[0]) && !characterSent) {
+            password = null; // Authentication succeeded far enough to receive the server character list.
+            String[] names = (String[])field(screen.getClass(), "F", "[Ljava.lang.String;").get(screen);
+            int selected = -1;
+            for (int i = 0; i < names.length; i++) {
+                if (names[i] != null && (character.length() == 0 || names[i].equalsIgnoreCase(character))) {
+                    selected = i; break;
+                }
+            }
+            if (selected < 0) { automation = "CHARACTER_NOT_FOUND"; return; }
+            field(screen.getClass(), "q", "int").setInt(screen, selected);
+            characterSent = true;
+            automation = "CHARACTER_SENT";
+            invokeOnGameThread(loaded, new Runnable() { public void run() {
+                try { action(screen, 1000); } catch (Exception ex) { automation = "ERROR"; }
+            }});
+        } else if ("GAME_SCREEN".equals(state[0])) {
+            password = null;
+            automation = "COMPLETE";
+        }
+    }
+
+    private static void action(Object screen, int id) throws Exception {
+        method(screen.getClass(), "a", Integer.TYPE, Object.class).invoke(screen, Integer.valueOf(id), null);
+    }
+
+    private static void invokeOnGameThread(Class<?>[] loaded, Runnable action) throws Exception {
+        Class<?> midletClass = find(loaded, "GameMidlet");
+        Object midlet = field(midletClass, "a", "GameMidlet").get(null);
+        if (midlet == null) throw new IllegalStateException();
+        Class<?> displayClass = find(loaded, "javax.microedition.lcdui.Display");
+        Class<?> midletBase = find(loaded, "javax.microedition.midlet.MIDlet");
+        Object display = displayClass.getMethod("getDisplay", midletBase).invoke(null, midlet);
+        displayClass.getMethod("callSerially", Runnable.class).invoke(display, action);
+    }
+
+    private static Class<?> find(Class<?>[] loaded, String name) throws ClassNotFoundException {
+        Class<?> found = null;
+        for (Class<?> c : loaded) if (c.getName().equals(name)) {
+            if (found != null && found != c) throw new ClassNotFoundException(name);
+            found = c;
+        }
+        if (found == null) throw new ClassNotFoundException(name);
+        return found;
+    }
+
+    private static Method method(Class<?> owner, String name, Class<?>... types) throws NoSuchMethodException {
+        Method value = owner.getDeclaredMethod(name, types);
+        value.setAccessible(true);
+        return value;
     }
 
     static Field field(Class<?> owner, String name, String type) throws NoSuchFieldException {
@@ -110,5 +209,9 @@ public final class Agent {
 
     private static String encode(String value) {
         return Base64.getEncoder().encodeToString(value.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static String decode(String value) {
+        return new String(Base64.getDecoder().decode(value), StandardCharsets.UTF_8);
     }
 }

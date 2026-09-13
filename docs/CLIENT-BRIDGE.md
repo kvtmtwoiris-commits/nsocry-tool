@@ -2,7 +2,7 @@
 
 ## Phạm vi hiện tại
 
-Đã có kênh TCP hai chiều trên `127.0.0.1`: tool gửi `POLL`, agent trong JVM trả trạng thái thật của đối tượng màn hình. Không dùng OCR, tọa độ hoặc SendKeys. Đây là adapter đọc trạng thái; chưa có lệnh tự đăng nhập/chọn nhân vật. Tùy chọn tự đăng nhập được giữ trong hồ sơ nhưng tạm vô hiệu trên GUI. Thông tin đăng nhập đã lưu không bị xóa.
+Kênh TCP hai chiều trên `127.0.0.1` đọc trạng thái thật và điều khiển luồng đăng nhập ngay trong JVM. Không dùng OCR, tọa độ hoặc SendKeys. Khi bật Tự đăng nhập, tool chuyển thông tin qua phiên đã xác thực; agent gọi action đăng nhập sẵn có của client và chọn chính xác tên nhân vật trong cấu hình.
 
 Không coi tiến trình Java còn chạy, socket còn mở hay màn hình game còn hiển thị là xác nhận nhân vật đang online trên server. Bản này báo **Màn hình game**, không báo **Online**. Chưa có heartbeat ở giao thức game hay xác nhận map/nhân vật từ server.
 
@@ -24,19 +24,20 @@ Không coi tiến trình Java còn chạy, socket còn mở hay màn hình game 
 | `bJ` | Màn hình quản lý/nhập thông tin tài khoản. Không đồng nhất mọi trạng thái của lớp này với ô login trong ảnh. |
 | `cH.F:String[]` | Danh sách tên nhân vật; thao tác chọn lấy `F[q]` gửi qua `cK.P(String)`. |
 | `ba` | Màn hình game; chưa đủ chứng cứ kết luận server vẫn kết nối. |
-| `bJ.e:db`, `bJ.f:db` | Trường tài khoản/mật khẩu; có setter `db.ah(String)`. Chưa gọi trong bản 1. |
+| `bJ.e:db`, `bJ.f:db` | Trường tài khoản/mật khẩu; agent điền qua `db.ah(String)` nếu client đang ở màn hình này. |
 
 Client đã làm rối tên. Nhiều field cùng tên `a` nhưng khác descriptor; reflection phải chọn theo **cả tên và kiểu**, không dùng `getDeclaredField("a")`. Phương thức cũng có thể trùng tên và tham số nhưng khác kiểu trả về; mọi adapter ghi sau này phải xét đủ signature.
 
-Không bật lệnh login chỉ dựa vào tên nút: ví dụ handler `bJ.a(2000,Object)` lưu trường nhập vào `cI.p/q` và về menu. Luồng `bJ.a()` thiết lập các nút khác, gồm cả hộp thoại thông báo. Cần kiểm chứng luồng thực tế trước khi gọi tự động.
+Handler `bJ.a(2000,Object)` lưu trường nhập vào `cI.p/q` và về menu. Ở menu, agent đặt `cI.p/q` rồi gọi `cI.a(1003,Object)`; client tự lưu RMS và gửi login bằng `cK.c(...)`. Khi `cH.F` xuất hiện, agent đặt chỉ số `cH.q` theo tên cấu hình rồi gọi `cH.a(1000,Object)`, cùng đường lệnh chọn nhân vật của client.
 
 ## Giao thức và vòng đời
 
 Mỗi lần mở client tạo listener/cổng tạm và token ngẫu nhiên 256 bit riêng. Truyền cổng/token qua môi trường của tiến trình con; không ghi token, tài khoản hay mật khẩu vào log. Agent kết nối từ JVM bằng `-javaagent`; không sửa JAR game hoặc JAR MicroEmulator.
 
 1. Agent gửi `HELLO\t1\tTOKEN\n`; tool xác thực và trả `OK\n`.
-2. Tool gửi `POLL\n` mỗi 750 ms; chỉ một yêu cầu đang chờ.
-3. Agent trả `STATE\tPHASE\tBASE64_SCREEN\tBASE64_CHARACTER_NAMES\n`. Tên nhân vật phân cách bằng newline trước khi base64 UTF-8.
+2. Nếu bật tự đăng nhập, tool gửi một lệnh `LOGIN` chứa ba trường base64 UTF-8 và chờ `ACK`. Mật khẩu không nằm trong dòng lệnh tiến trình hoặc biến môi trường.
+3. Tool gửi `POLL\n` mỗi 750 ms; chỉ một yêu cầu đang chờ.
+4. Agent trả trạng thái màn hình, tên nhân vật và tiến độ tự đăng nhập. Tên nhân vật phân cách bằng newline trước khi base64 UTF-8.
 4. Mất kết nối, phản hồi quá dài hoặc quá 4 giây không có phản hồi: đánh dấu mất cầu nối. Không tự lặp đăng nhập hay đóng game.
 5. Tắt/restart hồ sơ hủy phiên cũ. JVM mới có cổng/token mới, không nhận trạng thái từ lần chạy trước.
 
@@ -50,6 +51,6 @@ Người phát triển dùng JDK 17: `python bridge/build.py`. CI đối chiếu
 
 Kiểm tra thực tế còn cần trên Windows với game/server: mở hồ sơ mới/cũ, mở ô tài khoản, đăng nhập thủ công tới chọn nhân vật, vào game và ngắt mạng. Đối chiếu cột trạng thái và tooltip với ảnh. Chưa xác nhận trực quan toàn bộ bốn màn hình bằng client đang chạy trên VPS của người dùng.
 
-## Bước tiếp theo của adapter ghi
+## Giới hạn cần kiểm tra thực tế
 
-Xác nhận đủ trạng thái menu mới/cũ, hộp thoại login và lỗi; gọi thao tác trên đúng luồng xử lý game; chờ phản hồi server để xác nhận đăng nhập; chỉ chọn tên nhân vật khớp cấu hình; timeout và dừng khi sai mật khẩu/nhân vật không tồn tại. Không đưa mật khẩu lên dòng lệnh hoặc dùng SendKeys làm phương án dự phòng.
+Agent chỉ gửi login một lần trong mỗi lần mở client. Hộp thoại lỗi không bị tự đóng; sai mật khẩu sẽ dừng để người dùng đọc lỗi. Nếu tên nhân vật cấu hình không khớp danh sách server, trạng thái là `CHARACTER_NOT_FOUND` và không tự chọn nhân vật khác. Cần đối chiếu thực tế trên Windows với cả hồ sơ mới và hồ sơ đã có RMS.

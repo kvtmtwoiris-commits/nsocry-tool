@@ -35,7 +35,8 @@ public sealed class ClientProcessManager : IDisposable
         var agentJar = ClientBridgeSession.InstallAgent(_runtimeDirectory);
         using var gameFile = File.OpenRead(gameJar);
         bool supported = Convert.ToHexString(SHA256.HashData(gameFile)) == SupportedClient;
-        var bridge = new ClientBridgeSession();
+        var password = profile.AutoLogin ? CredentialProtector.Unprotect(profile.EncryptedPassword) : null;
+        var bridge = new ClientBridgeSession(profile.AutoLogin ? profile.Account : null, password, profile.CharacterName);
         try
         {
             var startInfo = new ProcessStartInfo

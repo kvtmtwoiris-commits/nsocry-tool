@@ -57,4 +57,4 @@ Mọi thay đổi GUI phải tuân theo [NSOCry Pro UI Design System](docs/UI-DE
 
 Bản hiện tại dùng Java agent để đọc màn hình và danh sách nhân vật trực tiếp từ JVM. Agent được đóng gói sẵn; cập nhật bằng `Update-Build.bat`, đóng/mở lại game để nạp agent. Giữ Resizable 500×300. Di chuột lên trạng thái để xem lớp màn hình và tên nhân vật.
 
-Đây là bản đọc trạng thái: tự đăng nhập bằng SendKeys đã được bỏ; tự đăng nhập trực tiếp chưa bật. Mật khẩu đã lưu vẫn được giữ. Client khác phiên bản tham chiếu báo **Client chưa hỗ trợ**. **Màn hình game** chưa phải xác nhận nhân vật online trên server. Xem [tài liệu cầu nối](docs/CLIENT-BRIDGE.md).
+Khi bật Tự đăng nhập, tool gửi thông tin qua kênh cục bộ đã xác thực, gọi luồng login của client và chọn đúng tên nhân vật đã cấu hình. Sai mật khẩu hoặc không tìm thấy nhân vật sẽ dừng, không bấm lặp. Client khác phiên bản tham chiếu báo **Client chưa hỗ trợ**. **Màn hình game** chưa phải xác nhận nhân vật online trên server. Xem [tài liệu cầu nối](docs/CLIENT-BRIDGE.md).

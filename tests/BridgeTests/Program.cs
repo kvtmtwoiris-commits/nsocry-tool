@@ -23,10 +23,11 @@ static async Task SendState(ClientBridgeSession session, string phase, string ch
     using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(8));
     if (await reader.ReadLineAsync(deadline.Token) != "OK") throw new Exception("Handshake failed");
     if (await reader.ReadLineAsync(deadline.Token) != "POLL") throw new Exception("No poll");
-    var line = $"STATE\t{phase}\tY0g=\t{Convert.ToBase64String(Encoding.UTF8.GetBytes(character))}\n";
+    var line = $"STATE\t{phase}\tY0g=\t{Convert.ToBase64String(Encoding.UTF8.GetBytes(character))}\tTE9HSU5fU0VOVA==\n";
     await client.GetStream().WriteAsync(Encoding.UTF8.GetBytes(line));
     await WaitFor(() => session.Snapshot?.Phase == phase);
     if (session.Snapshot?.Characters != character) throw new Exception("Account data mixed");
+    if (session.Snapshot?.Automation != "LOGIN_SENT") throw new Exception("Automation state lost");
 }
 
 using var first = new ClientBridgeSession();

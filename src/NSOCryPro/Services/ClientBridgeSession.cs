@@ -6,7 +6,7 @@ using System.Text;
 
 namespace NSOCryPro.Services;
 
-public sealed record ClientBridgeSnapshot(string Phase, string Screen, string Characters, DateTimeOffset ReceivedAt)
+public sealed record ClientBridgeSnapshot(string Phase, string Screen, string Characters, string Automation, DateTimeOffset ReceivedAt)
 {
     public string Label => Phase switch
     {
@@ -24,20 +24,23 @@ public sealed record ClientBridgeSnapshot(string Phase, string Screen, string Ch
     };
 }
 
-/// <summary>One authenticated, loopback-only channel per client launch. Never transports passwords.</summary>
+/// <summary>One authenticated, loopback-only channel per client launch; credentials are never put on the process command line.</summary>
 public sealed class ClientBridgeSession : IDisposable
 {
     private readonly TcpListener _listener = new(IPAddress.Loopback, 0);
     private readonly CancellationTokenSource _stop = new();
     private readonly Task _worker;
+    private readonly string? _loginCommand;
     private ClientBridgeSnapshot? _snapshot;
     private bool _disposed;
     public string Token { get; } = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
     public int Port { get; }
     public ClientBridgeSnapshot? Snapshot => Volatile.Read(ref _snapshot);
 
-    public ClientBridgeSession()
+    public ClientBridgeSession(string? account = null, string? password = null, string? character = null)
     {
+        if (!string.IsNullOrWhiteSpace(account) && !string.IsNullOrEmpty(password))
+            _loginCommand = $"LOGIN\t{Encode(account)}\t{Encode(password)}\t{Encode(character ?? string.Empty)}";
         _listener.Start(4);
         Port = ((IPEndPoint)_listener.LocalEndpoint).Port;
         _worker = RunAsync();
@@ -63,16 +66,22 @@ public sealed class ClientBridgeSession : IDisposable
                 if (hello != $"HELLO\t1\t{Token}") continue;
                 _listener.Stop();
                 await writer.WriteLineAsync("OK".AsMemory(), ct);
+                if (_loginCommand is not null)
+                {
+                    await writer.WriteLineAsync(_loginCommand.AsMemory(), ct);
+                    if (await ReadLineAsync(reader, ct, 32) != "ACK") throw new IOException("Bridge login setup failed.");
+                }
                 while (!ct.IsCancellationRequested)
                 {
                     await writer.WriteLineAsync("POLL".AsMemory(), ct);
                     var line = await ReadLineAsync(reader, ct, 8192);
                     if (line is null) break;
                     var parts = line.Split('\t');
-                    if (parts.Length != 4 || parts[0] != "STATE") throw new IOException("Invalid bridge response.");
+                    if (parts.Length != 5 || parts[0] != "STATE") throw new IOException("Invalid bridge response.");
                     var screen = Encoding.UTF8.GetString(Convert.FromBase64String(parts[2]));
                     var characters = Encoding.UTF8.GetString(Convert.FromBase64String(parts[3]));
-                    Volatile.Write(ref _snapshot, new(parts[1], screen, characters, DateTimeOffset.UtcNow));
+                    var automation = Encoding.UTF8.GetString(Convert.FromBase64String(parts[4]));
+                    Volatile.Write(ref _snapshot, new(parts[1], screen, characters, automation, DateTimeOffset.UtcNow));
                     await Task.Delay(750, ct);
                 }
                 break;
@@ -82,9 +91,11 @@ public sealed class ClientBridgeSession : IDisposable
         finally
         {
             _listener.Stop();
-            Volatile.Write(ref _snapshot, new("DISCONNECTED", "", "", DateTimeOffset.UtcNow));
+            Volatile.Write(ref _snapshot, new("DISCONNECTED", "", "", "", DateTimeOffset.UtcNow));
         }
     }
+
+    private static string Encode(string value) => Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
 
     private static async Task<string?> ReadLineAsync(StreamReader reader, CancellationToken ct, int limit)
     {

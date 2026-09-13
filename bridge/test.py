@@ -13,7 +13,7 @@ with tempfile.TemporaryDirectory() as directory:
     target = pathlib.Path(directory)
     subprocess.run(compiler() + ['--release', '8', '-encoding', 'UTF-8', '-d', str(target)]
                    + [str(p) for p in (ROOT / 'src').rglob('*.java')]
-                   + [str(p) for p in (ROOT / 'tests').glob('*.java')], check=True)
+                   + [str(p) for p in (ROOT / 'tests').rglob('*.java')], check=True)
     path = target / 'aY.class'
     data = bytearray(path.read_bytes())
     # Rename just CONSTANT_Utf8 "b" to "a", keeping both distinct field descriptors.
@@ -46,7 +46,7 @@ with tempfile.TemporaryDirectory() as directory:
                 file = connection.makefile('rwb', buffering=0)
                 assert file.readline().decode().strip() == 'HELLO\t1\t' + token
                 file.write(b'OK\nPOLL\n')
-                assert file.readline().decode('utf-8').rstrip('\r\n') == 'STATE\tUNSUPPORTED\t\t'
+                assert file.readline().decode('utf-8').rstrip('\r\n') == 'STATE\tUNSUPPORTED\t\t\tRElTQUJMRUQ='
                 file.write(b'INVALID\n')
                 assert file.readline() == b''
                 assert process.poll() is None, 'Bridge failure terminated game host'

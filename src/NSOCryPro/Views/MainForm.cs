@@ -253,8 +253,7 @@ public sealed class MainForm : Form
         _grid.Columns[nameof(ClientProfile.AutoLogin)].MinimumWidth = 100;
         _grid.Columns[nameof(ClientProfile.AutoRestart)].MinimumWidth = 90;
         _grid.Columns["Status"].MinimumWidth = 155;
-        _grid.Columns[nameof(ClientProfile.AutoLogin)].ReadOnly = true;
-        _grid.Columns[nameof(ClientProfile.AutoLogin)].HeaderCell.ToolTipText = "Đang tích hợp đăng nhập trực tiếp; chưa tự gửi tài khoản/mật khẩu.";
+        _grid.Columns[nameof(ClientProfile.AutoLogin)].HeaderCell.ToolTipText = "Đăng nhập trực tiếp trong JVM sau khi mở client.";
         _grid.Columns[nameof(ClientProfile.CharacterName)].MinimumWidth = 130;
         _grid.Columns[nameof(ClientProfile.Account)].MinimumWidth = 120;
         _grid.Columns[nameof(ClientProfile.AutoRestart)].ReadOnly = true;
@@ -306,7 +305,7 @@ public sealed class MainForm : Form
             }
             else if (column is DataGridViewCheckBoxColumn)
             {
-                bool unavailable = column.Name == nameof(ClientProfile.AutoRestart) || column.Name == nameof(ClientProfile.AutoLogin);
+                bool unavailable = column.Name == nameof(ClientProfile.AutoRestart);
                 bool check = !unavailable && e.FormattedValue is bool value && value;
                 int size = D(18);
                 var box = new Rectangle(bounds.X + (bounds.Width - size) / 2,
@@ -557,7 +556,7 @@ public sealed class MainForm : Form
             SetCellValue(row.Cells["Status"], _processManager.GetStateLabel(profile.Id));
             var snapshot = _processManager.GetSnapshot(profile.Id);
             row.Cells["Status"].ToolTipText = snapshot is null ? "Đang chờ dữ liệu trực tiếp từ giả lập."
-                : $"{_processManager.GetStateLabel(profile.Id)}\nLớp màn hình: {snapshot.Screen}\nNhân vật: {snapshot.Characters.Replace('\n', ',')}\nTrạng thái màn hình không thay thế xác nhận kết nối từ server.";
+                : $"{_processManager.GetStateLabel(profile.Id)}\nTự đăng nhập: {snapshot.Automation}\nLớp màn hình: {snapshot.Screen}\nNhân vật: {snapshot.Characters.Replace('\n', ',')}\nTrạng thái màn hình không thay thế xác nhận kết nối từ server.";
             SetCellValue(row.Cells["Pid"], active ? process!.Id : "-");
             SetCellValue(row.Cells["Ram"], active ? $"{process!.WorkingSet64 / 1024 / 1024} MB" : "-");
         }
