@@ -38,6 +38,16 @@ echo [2/4] Dang khoi phuc goi phu thuoc...
 "%DOTNET_CMD%" restore NSOCryPro.sln
 if errorlevel 1 goto :failed
 
+tasklist /FI "IMAGENAME eq NSOCryPro.exe" 2>nul | find /I "NSOCryPro.exe" >nul
+if not errorlevel 1 (
+    echo [INFO] Dang dong NSOCry Pro cu de mo khoa thu muc dist...
+    taskkill /IM NSOCryPro.exe /T >nul 2>nul
+    timeout /t 2 /nobreak >nul
+    tasklist /FI "IMAGENAME eq NSOCryPro.exe" 2>nul | find /I "NSOCryPro.exe" >nul
+    if not errorlevel 1 taskkill /F /IM NSOCryPro.exe /T >nul 2>nul
+    timeout /t 1 /nobreak >nul
+)
+
 echo [3/4] Dang build NSOCry Pro...
 "%DOTNET_CMD%" publish src\NSOCryPro\NSOCryPro.csproj -c Release -r win-x64 --self-contained false -o dist
 if errorlevel 1 goto :failed
