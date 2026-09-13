@@ -34,7 +34,7 @@
 - Kích thước tối thiểu: 1120 × 700 px.
 - Lề ngoài: trái/phải 24 px, trên 20 px, dưới 16 px.
 - Thứ tự: header → metric cards → action bar → client table → settings → footer.
-- Header 70 px; metric cards 110 px; action bar 64 px; settings 166 px; footer 32 px.
+- Header 70 px; metric cards 110 px; action bar 64 px; settings 280 px; footer 32 px.
 
 ## 4. Thành phần
 
@@ -84,12 +84,13 @@
 ### Settings và footer
 
 - Settings nằm trong card trắng bo góc 14 px.
-- Tab cao 34 px, rộng 150 px.
+- Thanh tab chính cao 42 px, mỗi mục rộng 150 px. Vùng cấu hình không được thấp hơn 280 px ở kích thước cửa sổ mặc định.
 - `Cấu hình Auto` chứa tab chức năng cấp một. Tab đầu tiên là `Đánh quái (Train)`.
 - `Đánh quái (Train)` chứa đúng thứ tự các tab con: `Cài đặt cơ bản`, `Nâng cao`, `Gán skill`, `Kiểu đánh quái`, `Kích yên`.
-- Tab cấp chức năng và tab con cao 30 px; nền trắng, tab đang chọn dùng blue soft, chữ primary blue và gạch chân xanh 2 px.
+- Tab cấp chức năng và tab con cao 38 px; nền trắng, tab đang chọn dùng blue soft, chữ primary blue và gạch chân xanh 3 px.
 - Nhãn tab phải căn giữa, dùng Segoe UI Semibold 8.5–8.75 pt và cắt bằng dấu ba chấm khi thiếu chiều rộng.
-- Không dùng viền nổi hoặc nền xám kiểu TabControl mặc định của WinForms.
+- Dùng `ModernTabs` tự dựng bằng button và content panel; không dùng phần thân hoặc viền nổi của TabControl mặc định.
+- Ba cấp điều hướng phải để lại vùng nội dung sử dụng được. Nội dung nằm trong panel nền ứng dụng, viền 1 px và bo góc 12 px; không được cắt chữ ở DPI 100–150%.
 - Footer chỉ chứa trạng thái gần nhất bên trái và phiên bản bên phải.
 
 ### Hộp thoại hồ sơ

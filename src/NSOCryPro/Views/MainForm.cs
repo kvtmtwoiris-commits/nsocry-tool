@@ -69,7 +69,7 @@ public sealed class MainForm : Form
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 110));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 64));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 166));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 280));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
         root.Controls.Add(Header(), 0, 0);
         root.Controls.Add(Metrics(), 0, 1);
@@ -369,88 +369,85 @@ public sealed class MainForm : Form
     {
         var card = new RoundPanel
         {
-            Dock = DockStyle.Fill, Padding = new Padding(12), BackColor = White,
+            Dock = DockStyle.Fill, Padding = new Padding(16, 12, 16, 14), BackColor = White,
             BorderColor = Line, Radius = 14
         };
-        var tabs = StyledTabs(new Size(150, 34), 9F);
-        tabs.TabPages.Add(InfoTab("Tổng quan", "Quản lý tập trung",
+        var tabs = new ModernTabs(42, 150, 9F);
+        tabs.AddPage("Tổng quan", InfoPage("Quản lý tập trung",
             "Chọn hồ sơ trong bảng, sau đó mở, dừng hoặc khởi động lại client bằng thanh thao tác."));
-        tabs.TabPages.Add(AutoConfigurationTab());
-        tabs.TabPages.Add(InfoTab("Nhật ký", "Theo dõi hoạt động",
+        tabs.AddPage("Cấu hình Auto", AutoConfigurationPage());
+        tabs.AddPage("Nhật ký", InfoPage("Theo dõi hoạt động",
             "Lịch sử thao tác và sự kiện của từng client sẽ được hiển thị tại đây."));
         card.Controls.Add(tabs);
         return card;
     }
 
-    private static TabPage AutoConfigurationTab()
+    private static Control AutoConfigurationPage()
     {
-        var page = new TabPage("Cấu hình Auto")
+        var page = new Panel
         {
-            BackColor = White, ForeColor = TextPrimary, Padding = new Padding(0)
+            Dock = DockStyle.Fill, BackColor = White, Padding = new Padding(0, 8, 0, 0)
         };
-        var autoTabs = StyledTabs(new Size(168, 30), 8.75F);
+        var autoTabs = new ModernTabs(38, 168, 8.75F);
         autoTabs.Name = "AutoFeatureTabs";
-        autoTabs.TabPages.Add(TrainTab());
+        autoTabs.AddPage("Đánh quái (Train)", TrainPage());
         page.Controls.Add(autoTabs);
         return page;
     }
 
-    private static TabPage TrainTab()
+    private static Control TrainPage()
     {
-        var page = new TabPage("Đánh quái (Train)")
+        var page = new Panel
         {
-            BackColor = White, ForeColor = TextPrimary, Padding = new Padding(0)
+            Dock = DockStyle.Fill, BackColor = White, Padding = new Padding(0, 8, 0, 0)
         };
-        var trainTabs = StyledTabs(new Size(132, 30), 8.5F);
+        var trainTabs = new ModernTabs(38, 132, 8.5F);
         trainTabs.Name = "TrainSettingsTabs";
-        trainTabs.TabPages.Add(AutoSection("Cài đặt cơ bản", "Thiết lập chính cho chế độ đánh quái."));
-        trainTabs.TabPages.Add(AutoSection("Nâng cao", "Các điều kiện và giới hạn nâng cao."));
-        trainTabs.TabPages.Add(AutoSection("Gán skill", "Thiết lập kỹ năng dùng khi train."));
-        trainTabs.TabPages.Add(AutoSection("Kiểu đánh quái", "Chọn cách tìm và tấn công mục tiêu."));
-        trainTabs.TabPages.Add(AutoSection("Kích yên", "Thiết lập kích yên cho chế độ train."));
+        trainTabs.AddPage("Cài đặt cơ bản", AutoSection("Cài đặt cơ bản", "Thiết lập chính cho chế độ đánh quái."));
+        trainTabs.AddPage("Nâng cao", AutoSection("Nâng cao", "Các điều kiện và giới hạn nâng cao."));
+        trainTabs.AddPage("Gán skill", AutoSection("Gán skill", "Thiết lập kỹ năng dùng khi train."));
+        trainTabs.AddPage("Kiểu đánh quái", AutoSection("Kiểu đánh quái", "Chọn cách tìm và tấn công mục tiêu."));
+        trainTabs.AddPage("Kích yên", AutoSection("Kích yên", "Thiết lập kích yên cho chế độ train."));
         page.Controls.Add(trainTabs);
         return page;
     }
 
-    private static TabPage AutoSection(string title, string description)
+    private static Control AutoSection(string title, string description)
     {
-        var page = new TabPage(title) { BackColor = White, ForeColor = TextPrimary };
-        page.Controls.Add(new Label
+        var page = new Panel { Dock = DockStyle.Fill, BackColor = White, Padding = new Padding(4, 12, 4, 4) };
+        var content = new RoundPanel
         {
-            Text = description, Dock = DockStyle.Fill, Padding = new Padding(14, 8, 8, 4),
-            ForeColor = Muted, Font = new Font("Segoe UI", 8.75F),
-            TextAlign = ContentAlignment.TopLeft
+            Dock = DockStyle.Fill, BackColor = Bg, BorderColor = Line, Radius = 12,
+            Padding = new Padding(18, 12, 18, 10)
+        };
+        content.Controls.Add(new Label
+        {
+            Text = description, Dock = DockStyle.Top, Height = 24,
+            ForeColor = Muted, Font = new Font("Segoe UI", 9F)
         });
+        content.Controls.Add(new Label
+        {
+            Text = title, Dock = DockStyle.Top, Height = 27,
+            ForeColor = TextPrimary, Font = new Font("Segoe UI Semibold", 11F)
+        });
+        page.Controls.Add(content);
         return page;
     }
 
-    private static TabControl StyledTabs(Size itemSize, float fontSize)
+    private static Control InfoPage(string heading, string description)
     {
-        var tabs = new TabControl
+        var page = new Panel { Dock = DockStyle.Fill, BackColor = White, Padding = new Padding(18, 20, 18, 12) };
+        page.Controls.Add(new Label
         {
-            Dock = DockStyle.Fill, Appearance = TabAppearance.FlatButtons,
-            DrawMode = TabDrawMode.OwnerDrawFixed, ItemSize = itemSize,
-            SizeMode = TabSizeMode.Fixed, Font = new Font("Segoe UI Semibold", fontSize),
-            Padding = new Point(12, 4), BackColor = White
-        };
-        tabs.DrawItem += (_, e) =>
+            Text = description, Dock = DockStyle.Top, Height = 42,
+            ForeColor = Muted, Font = new Font("Segoe UI", 9.5F)
+        });
+        page.Controls.Add(new Label
         {
-            var selected = e.Index == tabs.SelectedIndex;
-            var bounds = e.Bounds;
-            using var background = new SolidBrush(selected ? BlueSoft : White);
-            e.Graphics.FillRectangle(background, bounds);
-            if (selected)
-            {
-                using var accent = new Pen(Blue, 2F);
-                e.Graphics.DrawLine(accent, bounds.Left + 10, bounds.Bottom - 2,
-                    bounds.Right - 10, bounds.Bottom - 2);
-            }
-            TextRenderer.DrawText(e.Graphics, tabs.TabPages[e.Index].Text, tabs.Font, bounds,
-                selected ? Blue : Muted,
-                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter |
-                TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
-        };
-        return tabs;
+            Text = heading, Dock = DockStyle.Top, Height = 32,
+            ForeColor = TextPrimary, Font = new Font("Segoe UI Semibold", 12F)
+        });
+        return page;
     }
 
     private Control Footer()
@@ -469,22 +466,6 @@ public sealed class MainForm : Form
         footer.Controls.Add(version);
         footer.Resize += (_, _) => version.Location = new Point(footer.ClientSize.Width - version.Width, 9);
         return footer;
-    }
-
-    private static TabPage InfoTab(string title, string heading, string description)
-    {
-        var page = new TabPage(title) { BackColor = White, ForeColor = TextPrimary };
-        page.Controls.Add(new Label
-        {
-            Text = description, Location = new Point(20, 52), Size = new Size(800, 45),
-            ForeColor = Muted, Font = new Font("Segoe UI", 9.5F)
-        });
-        page.Controls.Add(new Label
-        {
-            Text = heading, AutoSize = true, Location = new Point(20, 17),
-            ForeColor = TextPrimary, Font = new Font("Segoe UI Semibold", 12F)
-        });
-        return page;
     }
 
     private static Button Button(string caption, Action action, ButtonStyle style)
@@ -641,6 +622,90 @@ public sealed class MainForm : Form
 
 
     private enum ButtonStyle { Primary, Normal, Danger }
+
+    private sealed class ModernTabs : Panel
+    {
+        private readonly FlowLayoutPanel _header;
+        private readonly Panel _content;
+        private readonly List<(Button Button, Panel Accent, Control Page)> _pages = [];
+        private readonly int _headerHeight;
+        private readonly int _buttonWidth;
+        private readonly float _fontSize;
+        private int _selectedIndex = -1;
+
+        public ModernTabs(int headerHeight, int buttonWidth, float fontSize)
+        {
+            Dock = DockStyle.Fill;
+            BackColor = White;
+            _headerHeight = headerHeight;
+            _buttonWidth = buttonWidth;
+            _fontSize = fontSize;
+
+            _content = new Panel { Dock = DockStyle.Fill, BackColor = White };
+            var headerBorder = new Panel
+            {
+                Dock = DockStyle.Top, Height = headerHeight, BackColor = White,
+                Padding = new Padding(0, 0, 0, 1)
+            };
+            _header = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill, BackColor = White, WrapContents = false,
+                FlowDirection = FlowDirection.LeftToRight, Padding = new Padding(0), Margin = new Padding(0)
+            };
+            headerBorder.Controls.Add(_header);
+            headerBorder.Paint += (_, e) =>
+            {
+                using var line = new Pen(Line);
+                e.Graphics.DrawLine(line, 0, headerBorder.ClientSize.Height - 1,
+                    headerBorder.ClientSize.Width, headerBorder.ClientSize.Height - 1);
+            };
+            Controls.Add(_content);
+            Controls.Add(headerBorder);
+        }
+
+        public void AddPage(string title, Control page)
+        {
+            var index = _pages.Count;
+            var button = new Button
+            {
+                Text = title, Width = _buttonWidth, Height = _headerHeight - 1,
+                Margin = new Padding(0, 0, 6, 0), Padding = new Padding(8, 0, 8, 2),
+                FlatStyle = FlatStyle.Flat, BackColor = White, ForeColor = Muted,
+                Font = new Font("Segoe UI Semibold", _fontSize), Cursor = Cursors.Hand,
+                TextAlign = ContentAlignment.MiddleCenter, UseVisualStyleBackColor = false,
+                AutoEllipsis = true
+            };
+            button.FlatAppearance.BorderSize = 0;
+            button.FlatAppearance.MouseOverBackColor = BlueSoft;
+            button.FlatAppearance.MouseDownBackColor = BlueSoft;
+            var accent = new Panel { Dock = DockStyle.Bottom, Height = 3, BackColor = Blue, Visible = false };
+            button.Controls.Add(accent);
+            button.Click += (_, _) => SelectPage(index);
+
+            page.Dock = DockStyle.Fill;
+            page.Visible = false;
+            _content.Controls.Add(page);
+            _header.Controls.Add(button);
+            _pages.Add((button, accent, page));
+            if (_selectedIndex < 0) SelectPage(0);
+        }
+
+        private void SelectPage(int index)
+        {
+            if (index < 0 || index >= _pages.Count) return;
+            _selectedIndex = index;
+            for (var i = 0; i < _pages.Count; i++)
+            {
+                var selected = i == index;
+                var item = _pages[i];
+                item.Button.BackColor = selected ? BlueSoft : White;
+                item.Button.ForeColor = selected ? Blue : Muted;
+                item.Accent.Visible = selected;
+                item.Page.Visible = selected;
+                if (selected) item.Page.BringToFront();
+            }
+        }
+    }
 
     private sealed class BufferedGrid : DataGridView
     {
