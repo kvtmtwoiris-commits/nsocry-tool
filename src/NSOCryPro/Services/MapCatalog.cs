@@ -5,7 +5,7 @@ namespace NSOCryPro.Services;
 public static class MapCatalog
 {
     // Các map thế giới thường dùng để train. Map đặc biệt vẫn được GET và thêm động từ client.
-    public static IReadOnlyList<MapOption> TrainingMaps { get; } = new[]
+    public static IReadOnlyList<MapOption> TrainingMaps { get; } = new MapOption[]
     {
         new(0, "Nhà thi đấu Haruna"), new(1, "Trường Hirosaki"), new(2, "Khu luyện tập"),
         new(3, "Động Hachi"), new(4, "Rừng đào Sakura"), new(5, "Rừng trúc Ura"),
