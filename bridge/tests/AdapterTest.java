@@ -3,7 +3,8 @@ package nsocry.bridge;
 public class AdapterTest {
     public static void main(String[] args) throws Exception {
         Class<?> canvas = Class.forName("aY");
-        Class<?>[] loaded = {canvas};
+        Class<?> map = Class.forName("dg");
+        Class<?>[] loaded = {canvas, map};
         check(Agent.inspect(new Class<?>[0])[0], "STARTING");
         check(Agent.inspect(loaded)[0], "STARTING");
         String[][] cases = {{"cI", "MENU"}, {"bJ", "ACCOUNT_SCREEN"}, {"cH", "CHARACTER_SELECT"}, {"ba", "GAME_SCREEN"}};
@@ -16,6 +17,10 @@ public class AdapterTest {
             check(state[1], c[0]);
             if (c[0].equals("cH")) check(state[2], "ninja1\nninja2");
             else check(state[2], "");
+            if (c[0].equals("ba")) {
+                check(state[4], "1");
+                check(state[5], "Trường Hirosaki");
+            }
         }
         java.lang.reflect.Field account = Agent.class.getDeclaredField("account"); account.setAccessible(true); account.set(null, "acc01");
         java.lang.reflect.Field password = Agent.class.getDeclaredField("password"); password.setAccessible(true); password.set(null, "secret");
@@ -42,7 +47,7 @@ public class AdapterTest {
         dialog.setAccessible(true);
         Agent.field(canvas, "a", "aq").set(null, dialog.newInstance());
         check(Agent.inspect(loaded)[0], "DIALOG");
-        System.out.println("Adapter tests passed: fields, dialog, direct login and exact character selection.");
+        System.out.println("Adapter tests passed: fields, current map, dialog, direct login and exact character selection.");
     }
     static void check(String actual, String expected) {
         if (!actual.equals(expected)) throw new AssertionError(actual + " != " + expected);

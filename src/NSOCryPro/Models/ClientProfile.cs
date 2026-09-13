@@ -10,4 +10,7 @@ public sealed class ClientProfile
     public string Server { get; set; } = "Bokken";
     public bool AutoLogin { get; set; } = true;
     public bool AutoRestart { get; set; } = true;
+    public bool TrainEnabled { get; set; }
+    public int TrainMapId { get; set; } = 1;
+    public string TrainMapName { get; set; } = "Trường Hirosaki";
 }

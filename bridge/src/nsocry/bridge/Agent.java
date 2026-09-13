@@ -50,18 +50,18 @@ public final class Agent {
                         String[] state;
                         try {
                             state = supported ? inspect(instrumentation.getAllLoadedClasses())
-                                    : new String[] {"UNSUPPORTED", "", "", "DISABLED"};
+                                    : emptyState("UNSUPPORTED", "DISABLED");
                             if (supported && account != null) automate(state, instrumentation.getAllLoadedClasses());
                         } catch (Exception ex) {
                             // Never serialize exception messages or arbitrary game fields: they may contain secrets.
                             automation = "ERROR";
-                            state = new String[] {"ADAPTER_ERROR", "", "", automation};
+                            state = emptyState("ADAPTER_ERROR", automation);
                         } catch (LinkageError ex) {
                             automation = "ERROR";
-                            state = new String[] {"ADAPTER_ERROR", "", "", automation};
+                            state = emptyState("ADAPTER_ERROR", automation);
                         }
                         output.println("STATE\t" + state[0] + "\t" + encode(state[1]) + "\t" + encode(state[2])
-                                + "\t" + encode(state[3]));
+                                + "\t" + encode(state[3]) + "\t" + state[4] + "\t" + encode(state[5]));
                         if (output.checkError()) return;
                     }
                 } catch (Exception ex) {
@@ -88,12 +88,12 @@ public final class Agent {
         Class<?> canvas = null;
         // Do not Class.forName an uninitialized client: use only classes already loaded by its MIDlet loader.
         for (Class<?> c : loaded) if (c.getName().equals("aY")) {
-            if (canvas != null && canvas != c) return new String[] {"ADAPTER_ERROR", "", "", automation};
+            if (canvas != null && canvas != c) return emptyState("ADAPTER_ERROR", automation);
             canvas = c;
         }
-        if (canvas == null) return new String[] {"STARTING", "", "", automation};
+        if (canvas == null) return emptyState("STARTING", automation);
         Object screen = field(canvas, "a", "dr").get(null);
-        if (screen == null) return new String[] {"STARTING", "", "", automation};
+        if (screen == null) return emptyState("STARTING", automation);
         String name = screen.getClass().getName();
         // aY.a:dr is the screen rendered by aY.a(Graphics), verified in the supplied client.
         String phase = name.equals("cI") ? "MENU" : name.equals("bJ") ? "ACCOUNT_SCREEN"
@@ -115,9 +115,24 @@ public final class Agent {
         // Dialogs can cover a screen. Report that separately instead of claiming the underlying screen is ready.
         Object dialog = field(canvas, "a", "aq").get(null);
         if (dialog != null) phase = "DIALOG";
+        String mapId = "-1";
+        String mapName = "";
+        if (phase.equals("GAME_SCREEN")) {
+            Class<?> map = findOptional(loaded, "dg");
+            if (map != null) {
+                mapId = Short.toString(field(map, "X", "short").getShort(null));
+                Object currentName = field(map, "hT", "java.lang.String").get(null);
+                if (currentName instanceof String)
+                    mapName = ((String) currentName).substring(0, Math.min(100, ((String) currentName).length()));
+            }
+        }
         // A transition during this sample invalidates the whole snapshot.
-        if (field(canvas, "a", "dr").get(null) != screen) return new String[] {"TRANSITION", "", "", automation};
-        return new String[] {phase, name, characters, automation};
+        if (field(canvas, "a", "dr").get(null) != screen) return emptyState("TRANSITION", automation);
+        return new String[] {phase, name, characters, automation, mapId, mapName};
+    }
+
+    private static String[] emptyState(String phase, String automationState) {
+        return new String[] {phase, "", "", automationState, "-1", ""};
     }
 
     static void automate(String[] state, Class<?>[] loaded) throws Exception {
@@ -187,6 +202,15 @@ public final class Agent {
             found = c;
         }
         if (found == null) throw new ClassNotFoundException(name);
+        return found;
+    }
+
+    private static Class<?> findOptional(Class<?>[] loaded, String name) throws ClassNotFoundException {
+        Class<?> found = null;
+        for (Class<?> c : loaded) if (c.getName().equals(name)) {
+            if (found != null && found != c) throw new ClassNotFoundException(name);
+            found = c;
+        }
         return found;
     }
 

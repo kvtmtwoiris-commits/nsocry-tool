@@ -93,6 +93,15 @@
 - Ba cấp điều hướng phải để lại vùng nội dung sử dụng được. Nội dung nằm trong panel nền ứng dụng, viền 1 px và bo góc 12 px; không được cắt chữ ở DPI 100–150%.
 - Footer chỉ chứa trạng thái gần nhất bên trái và phiên bản bên phải.
 
+### Cài đặt cơ bản / map đánh quái
+
+- Dùng một hàng điều khiển cố định: checkbox hiện đại `Đánh quái:` rộng 116 px, combobox map rộng 270 px, nút chính `GET` rộng 72 px và chú thích trạng thái ở cuối.
+- Tên map hiển thị theo mẫu `ID.Tên map`, ví dụ `1.Trường Hirosaki`.
+- Không dùng checkbox mặc định. Ô chọn bo 5 px, 18×18 px, viền xám khi tắt và nền xanh/tick trắng khi bật; chữ căn giữa theo chiều dọc.
+- `GET` đọc vị trí của hồ sơ đang chọn. Nếu client chưa vào màn hình game, chỉ báo ở footer và không thay đổi lựa chọn hiện tại.
+- Map lấy từ client nhưng chưa có trong danh mục phải được thêm động, không ép về map mặc định.
+- Checkbox và map lưu riêng theo hồ sơ; đổi dòng trong bảng phải nạp đúng cấu hình của dòng đó.
+
 ### Hộp thoại hồ sơ
 
 - Thêm và sửa tài khoản phải thực hiện trong ProfileDialog.

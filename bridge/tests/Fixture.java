@@ -9,6 +9,7 @@ class cI extends dr {
 }
 class bJ extends dr { }
 class ba extends dr { }
+class dg { public static short X = 1; public static String hT = "Trường Hirosaki"; }
 class cH extends dr {
     public String[] F = {"ninja1", null, "ninja2"};
     public int q;

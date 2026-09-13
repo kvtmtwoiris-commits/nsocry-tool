@@ -46,7 +46,7 @@ with tempfile.TemporaryDirectory() as directory:
                 file = connection.makefile('rwb', buffering=0)
                 assert file.readline().decode().strip() == 'HELLO\t1\t' + token
                 file.write(b'OK\nPOLL\n')
-                assert file.readline().decode('utf-8').rstrip('\r\n') == 'STATE\tUNSUPPORTED\t\t\tRElTQUJMRUQ='
+                assert file.readline().decode('utf-8').rstrip('\r\n') == 'STATE\tUNSUPPORTED\t\t\tRElTQUJMRUQ=\t-1\t'
                 file.write(b'INVALID\n')
                 assert file.readline() == b''
                 assert process.poll() is None, 'Bridge failure terminated game host'

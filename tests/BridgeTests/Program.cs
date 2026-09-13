@@ -16,18 +16,19 @@ static async Task<TcpClient> Connect(ClientBridgeSession session, string token)
     return client;
 }
 
-static async Task SendState(ClientBridgeSession session, string phase, string character)
+static async Task SendState(ClientBridgeSession session, string phase, string character, int mapId, string mapName)
 {
     using var client = await Connect(session, session.Token);
     using var reader = new StreamReader(client.GetStream());
     using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(8));
     if (await reader.ReadLineAsync(deadline.Token) != "OK") throw new Exception("Handshake failed");
     if (await reader.ReadLineAsync(deadline.Token) != "POLL") throw new Exception("No poll");
-    var line = $"STATE\t{phase}\tY0g=\t{Convert.ToBase64String(Encoding.UTF8.GetBytes(character))}\tTE9HSU5fU0VOVA==\n";
+    var line = $"STATE\t{phase}\tY0g=\t{Convert.ToBase64String(Encoding.UTF8.GetBytes(character))}\tTE9HSU5fU0VOVA==\t{mapId}\t{Convert.ToBase64String(Encoding.UTF8.GetBytes(mapName))}\n";
     await client.GetStream().WriteAsync(Encoding.UTF8.GetBytes(line));
     await WaitFor(() => session.Snapshot?.Phase == phase);
     if (session.Snapshot?.Characters != character) throw new Exception("Account data mixed");
     if (session.Snapshot?.Automation != "LOGIN_SENT") throw new Exception("Automation state lost");
+    if (session.Snapshot?.MapId != mapId || session.Snapshot?.MapName != mapName) throw new Exception("Map data mixed");
 }
 
 using var first = new ClientBridgeSession();
@@ -39,7 +40,8 @@ using (var wrong = await Connect(first, second.Token))
     using var timeout = new CancellationTokenSource(5000);
     if (await reader.ReadLineAsync(timeout.Token) is not null) throw new Exception("Wrong token accepted");
 }
-await Task.WhenAll(SendState(first, "CHARACTER_SELECT", "nhân vật A"), SendState(second, "MENU", "nhân vật B"));
+await Task.WhenAll(SendState(first, "GAME_SCREEN", "nhân vật A", 1, "Trường Hirosaki"),
+    SendState(second, "GAME_SCREEN", "nhân vật B", 22, "Làng Tone"));
 await WaitFor(() => first.Snapshot?.Phase == "DISCONNECTED" && second.Snapshot?.Phase == "DISCONNECTED");
 
 using var oversized = new ClientBridgeSession();
@@ -60,4 +62,4 @@ try
     if (!File.Exists(jar) || ClientBridgeSession.InstallAgent(runtime) != jar) throw new Exception("Agent extraction failed");
 }
 finally { if (Directory.Exists(runtime)) Directory.Delete(runtime, true); }
-Console.WriteLine("Bridge tests passed: per-client isolation, authentication, Unicode, disconnect, size limit, embedded agent.");
+Console.WriteLine("Bridge tests passed: per-client map isolation, authentication, Unicode, disconnect, size limit, embedded agent.");

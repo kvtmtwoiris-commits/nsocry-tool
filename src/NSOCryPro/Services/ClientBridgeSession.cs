@@ -6,7 +6,8 @@ using System.Text;
 
 namespace NSOCryPro.Services;
 
-public sealed record ClientBridgeSnapshot(string Phase, string Screen, string Characters, string Automation, DateTimeOffset ReceivedAt)
+public sealed record ClientBridgeSnapshot(string Phase, string Screen, string Characters, string Automation,
+    int? MapId, string MapName, DateTimeOffset ReceivedAt)
 {
     public string Label => Phase switch
     {
@@ -77,11 +78,13 @@ public sealed class ClientBridgeSession : IDisposable
                     var line = await ReadLineAsync(reader, ct, 8192);
                     if (line is null) break;
                     var parts = line.Split('\t');
-                    if (parts.Length != 5 || parts[0] != "STATE") throw new IOException("Invalid bridge response.");
+                    if (parts.Length != 7 || parts[0] != "STATE") throw new IOException("Invalid bridge response.");
                     var screen = Encoding.UTF8.GetString(Convert.FromBase64String(parts[2]));
                     var characters = Encoding.UTF8.GetString(Convert.FromBase64String(parts[3]));
                     var automation = Encoding.UTF8.GetString(Convert.FromBase64String(parts[4]));
-                    Volatile.Write(ref _snapshot, new(parts[1], screen, characters, automation, DateTimeOffset.UtcNow));
+                    int? mapId = int.TryParse(parts[5], out var parsedMapId) && parsedMapId >= 0 ? parsedMapId : null;
+                    var mapName = Encoding.UTF8.GetString(Convert.FromBase64String(parts[6]));
+                    Volatile.Write(ref _snapshot, new(parts[1], screen, characters, automation, mapId, mapName, DateTimeOffset.UtcNow));
                     await Task.Delay(750, ct);
                 }
                 break;
@@ -91,7 +94,7 @@ public sealed class ClientBridgeSession : IDisposable
         finally
         {
             _listener.Stop();
-            Volatile.Write(ref _snapshot, new("DISCONNECTED", "", "", "", DateTimeOffset.UtcNow));
+            Volatile.Write(ref _snapshot, new("DISCONNECTED", "", "", "", null, "", DateTimeOffset.UtcNow));
         }
     }
 

@@ -4,7 +4,7 @@
 
 Kênh TCP hai chiều trên `127.0.0.1` đọc trạng thái thật và điều khiển luồng đăng nhập ngay trong JVM. Không dùng OCR, tọa độ hoặc SendKeys. Khi bật Tự đăng nhập, tool chuyển thông tin qua phiên đã xác thực; agent gọi action đăng nhập sẵn có của client và chọn chính xác tên nhân vật trong cấu hình.
 
-Không coi tiến trình Java còn chạy, socket còn mở hay màn hình game còn hiển thị là xác nhận nhân vật đang online trên server. Bản này báo **Màn hình game**, không báo **Online**. Chưa có heartbeat ở giao thức game hay xác nhận map/nhân vật từ server.
+Không coi tiến trình Java còn chạy, socket còn mở hay màn hình game còn hiển thị là xác nhận nhân vật đang online trên server. Bản này báo **Màn hình game**, không báo **Online**. Khi đang ở màn hình game, cầu nối đọc ID và tên map hiện tại do client đã nhận từ server; chưa có heartbeat ở giao thức game.
 
 ## Client hỗ trợ
 
@@ -24,6 +24,7 @@ Không coi tiến trình Java còn chạy, socket còn mở hay màn hình game 
 | `bJ` | Màn hình quản lý/nhập thông tin tài khoản. Không đồng nhất mọi trạng thái của lớp này với ô login trong ảnh. |
 | `cH.F:String[]` | Danh sách tên nhân vật; thao tác chọn lấy `F[q]` gửi qua `cK.P(String)`. |
 | `ba` | Màn hình game; chưa đủ chứng cứ kết luận server vẫn kết nối. |
+| `dg.X:short`, `dg.hT:String` | ID và tên map hiện tại. Nút GET chỉ nhận hai field đã cho phép này khi `ba` đang là màn hình hoạt động. |
 | `bJ.e:db`, `bJ.f:db` | Trường tài khoản/mật khẩu; agent điền qua `db.ah(String)` nếu client đang ở màn hình này. |
 
 Client đã làm rối tên. Nhiều field cùng tên `a` nhưng khác descriptor; reflection phải chọn theo **cả tên và kiểu**, không dùng `getDeclaredField("a")`. Phương thức cũng có thể trùng tên và tham số nhưng khác kiểu trả về; mọi adapter ghi sau này phải xét đủ signature.
@@ -37,11 +38,15 @@ Mỗi lần mở client tạo listener/cổng tạm và token ngẫu nhiên 256 
 1. Agent gửi `HELLO\t1\tTOKEN\n`; tool xác thực và trả `OK\n`.
 2. Nếu bật tự đăng nhập, tool gửi một lệnh `LOGIN` chứa ba trường base64 UTF-8 và chờ `ACK`. Mật khẩu không nằm trong dòng lệnh tiến trình hoặc biến môi trường.
 3. Tool gửi `POLL\n` mỗi 750 ms; chỉ một yêu cầu đang chờ.
-4. Agent trả trạng thái màn hình, tên nhân vật và tiến độ tự đăng nhập. Tên nhân vật phân cách bằng newline trước khi base64 UTF-8.
+4. Agent trả trạng thái màn hình, tên nhân vật, tiến độ tự đăng nhập, ID map và tên map. Chuỗi được mã hóa base64 UTF-8.
 4. Mất kết nối, phản hồi quá dài hoặc quá 4 giây không có phản hồi: đánh dấu mất cầu nối. Không tự lặp đăng nhập hay đóng game.
 5. Tắt/restart hồ sơ hủy phiên cũ. JVM mới có cổng/token mới, không nhận trạng thái từ lần chạy trước.
 
-Token là phân tách phiên giữa các tiến trình cục bộ, không phải biện pháp chống phần mềm có toàn quyền trên Windows. Giao thức bản 1 chỉ đọc dữ liệu danh sách nhân vật đã cho phép; không xuất field tùy ý, nội dung text nhập hay stack trace của client.
+Token là phân tách phiên giữa các tiến trình cục bộ, không phải biện pháp chống phần mềm có toàn quyền trên Windows. Giao thức bản 1 chỉ đọc danh sách nhân vật và map đã cho phép; không xuất field tùy ý, nội dung text nhập hay stack trace của client.
+
+## Cấu hình map đánh quái
+
+Danh sách chọn sẵn gồm các map thế giới 0–72 thường dùng để train. Checkbox, ID và tên map được lưu riêng trong từng hồ sơ. Nút **GET** lấy `dg.X` + `dg.hT` từ đúng phiên client của hồ sơ đang chọn; map sự kiện hoặc map đặc biệt ngoài danh sách được thêm động và vẫn được lưu. GET chỉ khả dụng khi client đã vào màn hình game. Checkbox hiện lưu cấu hình mục tiêu; logic tự tìm và đánh quái được triển khai ở bước automation riêng.
 
 ## Build và kiểm tra
 

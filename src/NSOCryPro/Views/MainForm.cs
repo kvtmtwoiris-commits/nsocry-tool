@@ -31,6 +31,9 @@ public sealed class MainForm : Form
     private readonly Label _offline = MetricValue();
     private readonly Label _memory = MetricValue();
     private readonly Label _status = new();
+    private readonly ModernCheckBox _trainEnabled = new() { Text = "Đánh quái:" };
+    private readonly ComboBox _trainMap = new();
+    private bool _loadingTrainSettings;
     private readonly System.Windows.Forms.Timer _timer = new() { Interval = 1500 };
 
     public MainForm(JsonProfileStore store, ClientProcessManager processManager)
@@ -78,6 +81,7 @@ public sealed class MainForm : Form
         root.Controls.Add(SettingsCard(), 0, 4);
         root.Controls.Add(Footer(), 0, 5);
         Controls.Add(root);
+        LoadTrainSettings();
         RefreshStatus();
     }
 
@@ -274,6 +278,7 @@ public sealed class MainForm : Form
         {
             if (e.RowIndex >= 0 && _grid.Columns[e.ColumnIndex] is not DataGridViewCheckBoxColumn) EditSelected();
         };
+        _grid.SelectionChanged += (_, _) => LoadTrainSettings();
     }
 
     private void PaintGridCell(object? sender, DataGridViewCellPaintingEventArgs e)
@@ -382,7 +387,7 @@ public sealed class MainForm : Form
         return card;
     }
 
-    private static Control AutoConfigurationPage()
+    private Control AutoConfigurationPage()
     {
         var page = new Panel
         {
@@ -395,7 +400,7 @@ public sealed class MainForm : Form
         return page;
     }
 
-    private static Control TrainPage()
+    private Control TrainPage()
     {
         var page = new Panel
         {
@@ -403,13 +408,127 @@ public sealed class MainForm : Form
         };
         var trainTabs = new ModernTabs(38, 132, 8.5F);
         trainTabs.Name = "TrainSettingsTabs";
-        trainTabs.AddPage("Cài đặt cơ bản", AutoSection("Cài đặt cơ bản", "Thiết lập chính cho chế độ đánh quái."));
+        trainTabs.AddPage("Cài đặt cơ bản", TrainBasicSection());
         trainTabs.AddPage("Nâng cao", AutoSection("Nâng cao", "Các điều kiện và giới hạn nâng cao."));
         trainTabs.AddPage("Gán skill", AutoSection("Gán skill", "Thiết lập kỹ năng dùng khi train."));
         trainTabs.AddPage("Kiểu đánh quái", AutoSection("Kiểu đánh quái", "Chọn cách tìm và tấn công mục tiêu."));
         trainTabs.AddPage("Kích yên", AutoSection("Kích yên", "Thiết lập kích yên cho chế độ train."));
         page.Controls.Add(trainTabs);
         return page;
+    }
+
+    private Control TrainBasicSection()
+    {
+        var page = new Panel { Dock = DockStyle.Fill, BackColor = White, Padding = new Padding(4, 10, 4, 4) };
+        var card = new RoundPanel
+        {
+            Dock = DockStyle.Fill, BackColor = Bg, BorderColor = Line, Radius = 12,
+            Padding = new Padding(16, 10, 16, 10)
+        };
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, BackColor = Color.Transparent, ColumnCount = 1, RowCount = 2 };
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+        layout.Controls.Add(new Label
+        {
+            Text = "MAP ĐÁNH QUÁI", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft,
+            ForeColor = Muted, Font = new Font("Segoe UI Semibold", 8.25F)
+        }, 0, 0);
+        var row = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill, BackColor = Color.Transparent, WrapContents = false,
+            FlowDirection = FlowDirection.LeftToRight, Margin = new Padding(0)
+        };
+        _trainEnabled.Size = new Size(116, 34);
+        _trainEnabled.Margin = new Padding(0, 0, 10, 0);
+        _trainEnabled.CheckedChanged += (_, _) => SaveTrainEnabled();
+        _trainMap.DropDownStyle = ComboBoxStyle.DropDownList;
+        _trainMap.FlatStyle = FlatStyle.Flat;
+        _trainMap.Font = new Font("Segoe UI", 9.25F);
+        _trainMap.Width = 270;
+        _trainMap.Height = 34;
+        _trainMap.Margin = new Padding(0, 4, 10, 0);
+        _trainMap.BackColor = White;
+        _trainMap.ForeColor = TextPrimary;
+        _trainMap.SelectionChangeCommitted += (_, _) => SaveTrainMap();
+        var get = Button("GET", GetCurrentMap, ButtonStyle.Primary);
+        get.Width = 72;
+        get.AutoSize = false;
+        get.Margin = new Padding(0, 0, 12, 0);
+        row.Controls.AddRange([_trainEnabled, _trainMap, get, new Label
+        {
+            Text = "Đọc vị trí hiện tại từ client", AutoSize = true, ForeColor = Muted,
+            Font = new Font("Segoe UI", 8.75F), Margin = new Padding(0, 9, 0, 0)
+        }]);
+        layout.Controls.Add(row, 0, 1);
+        card.Controls.Add(layout);
+        page.Controls.Add(card);
+        return page;
+    }
+
+    private ClientProfile? CurrentProfile() => _grid.CurrentRow?.DataBoundItem as ClientProfile;
+
+    private void LoadTrainSettings()
+    {
+        if (_trainMap.IsDisposed) return;
+        _loadingTrainSettings = true;
+        try
+        {
+            var profile = CurrentProfile();
+            _trainEnabled.Enabled = profile is not null;
+            _trainMap.Enabled = profile is not null;
+            _trainEnabled.Checked = profile?.TrainEnabled == true;
+            _trainMap.BeginUpdate();
+            _trainMap.Items.Clear();
+            foreach (var map in MapCatalog.TrainingMaps) _trainMap.Items.Add(map);
+            if (profile is null) { _trainMap.SelectedIndex = -1; return; }
+            var selected = _trainMap.Items.Cast<MapOption>().FirstOrDefault(map => map.Id == profile.TrainMapId);
+            if (selected is null || (!string.IsNullOrWhiteSpace(profile.TrainMapName) && selected.Name != profile.TrainMapName))
+            {
+                if (selected is not null) _trainMap.Items.Remove(selected);
+                selected = new MapOption(profile.TrainMapId, profile.TrainMapName);
+                _trainMap.Items.Add(selected);
+            }
+            _trainMap.SelectedItem = selected;
+        }
+        finally
+        {
+            _trainMap.EndUpdate();
+            _loadingTrainSettings = false;
+        }
+    }
+
+    private void SaveTrainEnabled()
+    {
+        if (_loadingTrainSettings || CurrentProfile() is not { } profile) return;
+        profile.TrainEnabled = _trainEnabled.Checked;
+        Save();
+        SetStatus(profile.TrainEnabled ? "Đã bật cấu hình đánh quái" : "Đã tắt cấu hình đánh quái");
+    }
+
+    private void SaveTrainMap()
+    {
+        if (_loadingTrainSettings || CurrentProfile() is not { } profile || _trainMap.SelectedItem is not MapOption map) return;
+        profile.TrainMapId = map.Id;
+        profile.TrainMapName = map.Name;
+        Save();
+        SetStatus($"Đã chọn map {map}");
+    }
+
+    private void GetCurrentMap()
+    {
+        var profile = CurrentProfile();
+        if (profile is null) { SetStatus("Hãy chọn một hồ sơ trước khi lấy map"); return; }
+        var snapshot = _processManager.GetSnapshot(profile.Id);
+        if (snapshot?.Phase != "GAME_SCREEN" || snapshot.MapId is null || string.IsNullOrWhiteSpace(snapshot.MapName))
+        {
+            SetStatus("GET cần client đang đăng nhập và đứng trong map");
+            return;
+        }
+        profile.TrainMapId = snapshot.MapId.Value;
+        profile.TrainMapName = snapshot.MapName;
+        LoadTrainSettings();
+        Save();
+        SetStatus($"Đã lấy map {profile.TrainMapId}.{profile.TrainMapName} từ client");
     }
 
     private static Control AutoSection(string title, string description)
@@ -710,6 +829,52 @@ public sealed class MainForm : Form
     private sealed class BufferedGrid : DataGridView
     {
         public BufferedGrid() => DoubleBuffered = true;
+    }
+
+    private sealed class ModernCheckBox : CheckBox
+    {
+        public ModernCheckBox()
+        {
+            AutoSize = false;
+            Font = new Font("Segoe UI Semibold", 9F);
+            ForeColor = TextPrimary;
+            Cursor = Cursors.Hand;
+            DoubleBuffered = true;
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            e.Graphics.Clear(Parent?.BackColor ?? Bg);
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            float scale = DeviceDpi / 96f;
+            int size = Math.Max(16, (int)Math.Round(18 * scale));
+            var box = new Rectangle(1, (Height - size) / 2, size, size);
+            using var shape = RoundedRectangle(box, Math.Max(4, (int)Math.Round(5 * scale)));
+            using var fill = new SolidBrush(Checked ? Blue : White);
+            using var border = new Pen(Checked ? Blue : Color.FromArgb(203, 213, 225), scale);
+            e.Graphics.FillPath(fill, shape);
+            e.Graphics.DrawPath(border, shape);
+            if (Checked)
+            {
+                using var tick = new Pen(White, 2 * scale) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+                e.Graphics.DrawLines(tick, new PointF[]
+                {
+                    new(box.X + 4 * scale, box.Y + 9 * scale),
+                    new(box.X + 8 * scale, box.Y + 13 * scale),
+                    new(box.X + 14 * scale, box.Y + 5 * scale)
+                });
+            }
+            var textBounds = new Rectangle(box.Right + (int)Math.Round(9 * scale), 0,
+                Math.Max(0, Width - box.Right - (int)Math.Round(9 * scale)), Height);
+            TextRenderer.DrawText(e.Graphics, Text, Font, textBounds, Enabled ? ForeColor : Muted,
+                TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
+        }
+
+        protected override void OnCheckedChanged(EventArgs e)
+        {
+            base.OnCheckedChanged(e);
+            Invalidate();
+        }
     }
 
     private sealed class RoundPanel : Panel
