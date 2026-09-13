@@ -372,20 +372,85 @@ public sealed class MainForm : Form
             Dock = DockStyle.Fill, Padding = new Padding(12), BackColor = White,
             BorderColor = Line, Radius = 14
         };
-        var tabs = new TabControl
-        {
-            Dock = DockStyle.Fill, Appearance = TabAppearance.FlatButtons,
-            ItemSize = new Size(150, 34), SizeMode = TabSizeMode.Fixed,
-            Font = new Font("Segoe UI Semibold", 9F), Padding = new Point(14, 5)
-        };
+        var tabs = StyledTabs(new Size(150, 34), 9F);
         tabs.TabPages.Add(InfoTab("Tổng quan", "Quản lý tập trung",
             "Chọn hồ sơ trong bảng, sau đó mở, dừng hoặc khởi động lại client bằng thanh thao tác."));
-        tabs.TabPages.Add(InfoTab("Cấu hình Auto", "Tự động hóa",
-            "Thiết lập train, kỹ năng, nhặt vật phẩm và nhiệm vụ sẽ được tích hợp tại đây."));
+        tabs.TabPages.Add(AutoConfigurationTab());
         tabs.TabPages.Add(InfoTab("Nhật ký", "Theo dõi hoạt động",
             "Lịch sử thao tác và sự kiện của từng client sẽ được hiển thị tại đây."));
         card.Controls.Add(tabs);
         return card;
+    }
+
+    private static TabPage AutoConfigurationTab()
+    {
+        var page = new TabPage("Cấu hình Auto")
+        {
+            BackColor = White, ForeColor = TextPrimary, Padding = new Padding(0)
+        };
+        var autoTabs = StyledTabs(new Size(168, 30), 8.75F);
+        autoTabs.Name = "AutoFeatureTabs";
+        autoTabs.TabPages.Add(TrainTab());
+        page.Controls.Add(autoTabs);
+        return page;
+    }
+
+    private static TabPage TrainTab()
+    {
+        var page = new TabPage("Đánh quái (Train)")
+        {
+            BackColor = White, ForeColor = TextPrimary, Padding = new Padding(0)
+        };
+        var trainTabs = StyledTabs(new Size(132, 30), 8.5F);
+        trainTabs.Name = "TrainSettingsTabs";
+        trainTabs.TabPages.Add(AutoSection("Cài đặt cơ bản", "Thiết lập chính cho chế độ đánh quái."));
+        trainTabs.TabPages.Add(AutoSection("Nâng cao", "Các điều kiện và giới hạn nâng cao."));
+        trainTabs.TabPages.Add(AutoSection("Gán skill", "Thiết lập kỹ năng dùng khi train."));
+        trainTabs.TabPages.Add(AutoSection("Kiểu đánh quái", "Chọn cách tìm và tấn công mục tiêu."));
+        trainTabs.TabPages.Add(AutoSection("Kích yên", "Thiết lập kích yên cho chế độ train."));
+        page.Controls.Add(trainTabs);
+        return page;
+    }
+
+    private static TabPage AutoSection(string title, string description)
+    {
+        var page = new TabPage(title) { BackColor = White, ForeColor = TextPrimary };
+        page.Controls.Add(new Label
+        {
+            Text = description, Dock = DockStyle.Fill, Padding = new Padding(14, 8, 8, 4),
+            ForeColor = Muted, Font = new Font("Segoe UI", 8.75F),
+            TextAlign = ContentAlignment.TopLeft
+        });
+        return page;
+    }
+
+    private static TabControl StyledTabs(Size itemSize, float fontSize)
+    {
+        var tabs = new TabControl
+        {
+            Dock = DockStyle.Fill, Appearance = TabAppearance.FlatButtons,
+            DrawMode = TabDrawMode.OwnerDrawFixed, ItemSize = itemSize,
+            SizeMode = TabSizeMode.Fixed, Font = new Font("Segoe UI Semibold", fontSize),
+            Padding = new Point(12, 4), BackColor = White
+        };
+        tabs.DrawItem += (_, e) =>
+        {
+            var selected = e.Index == tabs.SelectedIndex;
+            var bounds = e.Bounds;
+            using var background = new SolidBrush(selected ? BlueSoft : White);
+            e.Graphics.FillRectangle(background, bounds);
+            if (selected)
+            {
+                using var accent = new Pen(Blue, 2F);
+                e.Graphics.DrawLine(accent, bounds.Left + 10, bounds.Bottom - 2,
+                    bounds.Right - 10, bounds.Bottom - 2);
+            }
+            TextRenderer.DrawText(e.Graphics, tabs.TabPages[e.Index].Text, tabs.Font, bounds,
+                selected ? Blue : Muted,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter |
+                TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+        };
+        return tabs;
     }
 
     private Control Footer()

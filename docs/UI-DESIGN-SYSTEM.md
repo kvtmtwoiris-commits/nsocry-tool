@@ -85,6 +85,11 @@
 
 - Settings nằm trong card trắng bo góc 14 px.
 - Tab cao 34 px, rộng 150 px.
+- `Cấu hình Auto` chứa tab chức năng cấp một. Tab đầu tiên là `Đánh quái (Train)`.
+- `Đánh quái (Train)` chứa đúng thứ tự các tab con: `Cài đặt cơ bản`, `Nâng cao`, `Gán skill`, `Kiểu đánh quái`, `Kích yên`.
+- Tab cấp chức năng và tab con cao 30 px; nền trắng, tab đang chọn dùng blue soft, chữ primary blue và gạch chân xanh 2 px.
+- Nhãn tab phải căn giữa, dùng Segoe UI Semibold 8.5–8.75 pt và cắt bằng dấu ba chấm khi thiếu chiều rộng.
+- Không dùng viền nổi hoặc nền xám kiểu TabControl mặc định của WinForms.
 - Footer chỉ chứa trạng thái gần nhất bên trái và phiên bản bên phải.
 
 ### Hộp thoại hồ sơ
