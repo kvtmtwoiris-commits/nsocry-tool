@@ -41,6 +41,7 @@ public sealed class MainForm : Form
     private readonly ModernCheckBox _chiefMonsters = new() { Text = "Đánh TL" };
     private bool _loadingTrainSettings;
     private readonly System.Windows.Forms.Timer _timer = new() { Interval = 1500 };
+    private readonly ToolTip _tips = new();
 
     public MainForm(JsonProfileStore store, ClientProcessManager processManager)
     {
@@ -429,7 +430,7 @@ public sealed class MainForm : Form
         var card = new RoundPanel
         {
             Dock = DockStyle.Fill, BackColor = Bg, BorderColor = Line, Radius = 12,
-            Padding = new Padding(16, 10, 16, 10)
+            Padding = new Padding(16, 6, 16, 6)
         };
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, BackColor = Color.Transparent, ColumnCount = 1, RowCount = 3 };
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 33.34F));
@@ -440,7 +441,7 @@ public sealed class MainForm : Form
             Dock = DockStyle.Fill, BackColor = Color.Transparent, WrapContents = false,
             FlowDirection = FlowDirection.LeftToRight, Margin = new Padding(0)
         };
-        _trainEnabled.Size = new Size(116, 34);
+        _trainEnabled.Size = new Size(116, 30);
         _trainEnabled.Margin = new Padding(0, 0, 10, 0);
         _trainEnabled.CheckedChanged += (_, _) => SaveTrainEnabled();
         _trainMap.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -454,12 +455,13 @@ public sealed class MainForm : Form
         _trainMap.SelectionChangeCommitted += (_, _) => SaveTrainMap();
         var get = Button("GET", GetCurrentMap, ButtonStyle.Primary);
         get.Width = 72;
+        get.Height = 30;
         get.AutoSize = false;
         get.Margin = new Padding(0, 0, 12, 0);
         mapRow.Controls.AddRange([_trainEnabled, _trainMap, get, new Label
         {
             Text = "Đọc vị trí hiện tại từ client", AutoSize = true, ForeColor = Muted,
-            Font = new Font("Segoe UI", 8.75F), Margin = new Padding(0, 9, 0, 0)
+            Font = new Font("Segoe UI", 8.75F), Margin = new Padding(0, 7, 0, 0)
         }]);
         layout.Controls.Add(mapRow, 0, 0);
 
@@ -475,7 +477,7 @@ public sealed class MainForm : Form
         _fixedZone.Size = new Size(86, 30);
         _fixedZone.CheckedChanged += (_, _) => ChangeTrainMode(false);
         _trainZone.Minimum = 0;
-        _trainZone.Maximum = 30;
+        _trainZone.Maximum = 255;
         _trainZone.Width = 58;
         _trainZone.Height = 28;
         _trainZone.Font = new Font("Segoe UI", 9F);
@@ -490,6 +492,11 @@ public sealed class MainForm : Form
         _chiefMonsters.CheckedChanged += (_, _) => SaveTrainOptions();
         targetRow.Controls.AddRange([_fixedZone, _trainZone, _eliteMonsters, _chiefMonsters]);
         layout.Controls.Add(targetRow, 0, 2);
+        _tips.SetToolTip(_emptyZone, "Ưu tiên khu không có người chơi khác; nếu không có, chọn khu ít người nhất.");
+        _tips.SetToolTip(_fixedZone, "Giữ nhân vật ở đúng khu đã chọn trong map.");
+        _tips.SetToolTip(_normalMonsters, "Bật hoặc tắt đánh quái thường.");
+        _tips.SetToolTip(_eliteMonsters, "Bật để đánh Tinh Anh; tắt để bỏ qua và né mục tiêu này.");
+        _tips.SetToolTip(_chiefMonsters, "Bật để đánh Thủ Lĩnh; tắt để bỏ qua và né mục tiêu này.");
         card.Controls.Add(layout);
         page.Controls.Add(card);
         return page;
