@@ -13,4 +13,9 @@ public sealed class ClientProfile
     public bool TrainEnabled { get; set; }
     public int TrainMapId { get; set; } = 1;
     public string TrainMapName { get; set; } = "Trường Hirosaki";
+    public bool TrainEmptyZone { get; set; }
+    public int TrainZone { get; set; }
+    public bool TrainNormalMonsters { get; set; } = true;
+    public bool TrainEliteMonsters { get; set; } = true;
+    public bool TrainChiefMonsters { get; set; } = true;
 }

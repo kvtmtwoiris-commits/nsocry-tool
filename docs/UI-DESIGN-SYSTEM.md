@@ -101,6 +101,7 @@
 - `GET` đọc vị trí của hồ sơ đang chọn. Nếu client chưa vào màn hình game, chỉ báo ở footer và không thay đổi lựa chọn hiện tại.
 - Map lấy từ client nhưng chưa có trong danh mục phải được thêm động, không ép về map mặc định.
 - Checkbox và map lưu riêng theo hồ sơ; đổi dòng trong bảng phải nạp đúng cấu hình của dòng đó.
+- Hai hàng tiếp theo dùng radio tự vẽ cho `Tàn sát map trống`/`Khu vực`, ô số khu và checkbox tự vẽ cho `Đánh quái thường`, `Đánh TA`, `Đánh TL`. Hai chế độ khu loại trừ lẫn nhau; chọn map trống sẽ khóa ô nhập khu.
 
 ### Hộp thoại hồ sơ
 

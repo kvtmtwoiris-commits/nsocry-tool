@@ -33,6 +33,12 @@ public sealed class MainForm : Form
     private readonly Label _status = new();
     private readonly ModernCheckBox _trainEnabled = new() { Text = "Đánh quái:" };
     private readonly ComboBox _trainMap = new();
+    private readonly ModernRadioButton _emptyZone = new() { Text = "Tàn sát map trống" };
+    private readonly ModernRadioButton _fixedZone = new() { Text = "Khu vực:" };
+    private readonly NumericUpDown _trainZone = new();
+    private readonly ModernCheckBox _normalMonsters = new() { Text = "Đánh quái thường" };
+    private readonly ModernCheckBox _eliteMonsters = new() { Text = "Đánh TA" };
+    private readonly ModernCheckBox _chiefMonsters = new() { Text = "Đánh TL" };
     private bool _loadingTrainSettings;
     private readonly System.Windows.Forms.Timer _timer = new() { Interval = 1500 };
 
@@ -425,15 +431,11 @@ public sealed class MainForm : Form
             Dock = DockStyle.Fill, BackColor = Bg, BorderColor = Line, Radius = 12,
             Padding = new Padding(16, 10, 16, 10)
         };
-        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, BackColor = Color.Transparent, ColumnCount = 1, RowCount = 2 };
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
-        layout.Controls.Add(new Label
-        {
-            Text = "MAP ĐÁNH QUÁI", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft,
-            ForeColor = Muted, Font = new Font("Segoe UI Semibold", 8.25F)
-        }, 0, 0);
-        var row = new FlowLayoutPanel
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, BackColor = Color.Transparent, ColumnCount = 1, RowCount = 3 };
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 33.34F));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 33.33F));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 33.33F));
+        var mapRow = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill, BackColor = Color.Transparent, WrapContents = false,
             FlowDirection = FlowDirection.LeftToRight, Margin = new Padding(0)
@@ -454,16 +456,50 @@ public sealed class MainForm : Form
         get.Width = 72;
         get.AutoSize = false;
         get.Margin = new Padding(0, 0, 12, 0);
-        row.Controls.AddRange([_trainEnabled, _trainMap, get, new Label
+        mapRow.Controls.AddRange([_trainEnabled, _trainMap, get, new Label
         {
             Text = "Đọc vị trí hiện tại từ client", AutoSize = true, ForeColor = Muted,
             Font = new Font("Segoe UI", 8.75F), Margin = new Padding(0, 9, 0, 0)
         }]);
-        layout.Controls.Add(row, 0, 1);
+        layout.Controls.Add(mapRow, 0, 0);
+
+        var modeRow = OptionRow();
+        _emptyZone.Size = new Size(174, 30);
+        _emptyZone.CheckedChanged += (_, _) => ChangeTrainMode(true);
+        _normalMonsters.Size = new Size(166, 30);
+        _normalMonsters.CheckedChanged += (_, _) => SaveTrainOptions();
+        modeRow.Controls.AddRange([_emptyZone, _normalMonsters]);
+        layout.Controls.Add(modeRow, 0, 1);
+
+        var targetRow = OptionRow();
+        _fixedZone.Size = new Size(86, 30);
+        _fixedZone.CheckedChanged += (_, _) => ChangeTrainMode(false);
+        _trainZone.Minimum = 0;
+        _trainZone.Maximum = 30;
+        _trainZone.Width = 58;
+        _trainZone.Height = 28;
+        _trainZone.Font = new Font("Segoe UI", 9F);
+        _trainZone.BackColor = White;
+        _trainZone.ForeColor = TextPrimary;
+        _trainZone.BorderStyle = BorderStyle.FixedSingle;
+        _trainZone.Margin = new Padding(0, 2, 20, 0);
+        _trainZone.ValueChanged += (_, _) => SaveTrainOptions();
+        _eliteMonsters.Size = new Size(104, 30);
+        _eliteMonsters.CheckedChanged += (_, _) => SaveTrainOptions();
+        _chiefMonsters.Size = new Size(104, 30);
+        _chiefMonsters.CheckedChanged += (_, _) => SaveTrainOptions();
+        targetRow.Controls.AddRange([_fixedZone, _trainZone, _eliteMonsters, _chiefMonsters]);
+        layout.Controls.Add(targetRow, 0, 2);
         card.Controls.Add(layout);
         page.Controls.Add(card);
         return page;
     }
+
+    private static FlowLayoutPanel OptionRow() => new()
+    {
+        Dock = DockStyle.Fill, BackColor = Color.Transparent, WrapContents = false,
+        FlowDirection = FlowDirection.LeftToRight, Margin = new Padding(0)
+    };
 
     private ClientProfile? CurrentProfile() => _grid.CurrentRow?.DataBoundItem as ClientProfile;
 
@@ -477,6 +513,18 @@ public sealed class MainForm : Form
             _trainEnabled.Enabled = profile is not null;
             _trainMap.Enabled = profile is not null;
             _trainEnabled.Checked = profile?.TrainEnabled == true;
+            _emptyZone.Enabled = profile is not null;
+            _fixedZone.Enabled = profile is not null;
+            _normalMonsters.Enabled = profile is not null;
+            _eliteMonsters.Enabled = profile is not null;
+            _chiefMonsters.Enabled = profile is not null;
+            _emptyZone.Checked = profile?.TrainEmptyZone == true;
+            _fixedZone.Checked = profile is not null && !profile.TrainEmptyZone;
+            _trainZone.Enabled = profile is not null && !profile.TrainEmptyZone;
+            _trainZone.Value = Math.Clamp(profile?.TrainZone ?? 0, (int)_trainZone.Minimum, (int)_trainZone.Maximum);
+            _normalMonsters.Checked = profile?.TrainNormalMonsters == true;
+            _eliteMonsters.Checked = profile?.TrainEliteMonsters == true;
+            _chiefMonsters.Checked = profile?.TrainChiefMonsters == true;
             _trainMap.BeginUpdate();
             _trainMap.Items.Clear();
             foreach (var map in MapCatalog.TrainingMaps) _trainMap.Items.Add(map);
@@ -512,6 +560,34 @@ public sealed class MainForm : Form
         profile.TrainMapName = map.Name;
         Save();
         SetStatus($"Đã chọn map {map}");
+    }
+
+    private void SaveTrainOptions()
+    {
+        if (_loadingTrainSettings || CurrentProfile() is not { } profile) return;
+        profile.TrainEmptyZone = _emptyZone.Checked;
+        profile.TrainZone = (int)_trainZone.Value;
+        profile.TrainNormalMonsters = _normalMonsters.Checked;
+        profile.TrainEliteMonsters = _eliteMonsters.Checked;
+        profile.TrainChiefMonsters = _chiefMonsters.Checked;
+        _trainZone.Enabled = !profile.TrainEmptyZone;
+        Save();
+        SetStatus(profile.TrainEmptyZone ? "Ưu tiên khu trống hoặc ít người nhất" : $"Đã chọn khu vực {profile.TrainZone}");
+    }
+
+    private void ChangeTrainMode(bool emptyZone)
+    {
+        if (_loadingTrainSettings) return;
+        var source = emptyZone ? _emptyZone : _fixedZone;
+        if (!source.Checked) return;
+        _loadingTrainSettings = true;
+        try
+        {
+            _emptyZone.Checked = emptyZone;
+            _fixedZone.Checked = !emptyZone;
+        }
+        finally { _loadingTrainSettings = false; }
+        SaveTrainOptions();
     }
 
     private void GetCurrentMap()
@@ -844,7 +920,7 @@ public sealed class MainForm : Form
 
         protected override void OnPaint(PaintEventArgs e)
         {
-            e.Graphics.Clear(Parent?.BackColor ?? Bg);
+            e.Graphics.Clear(Bg);
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             float scale = DeviceDpi / 96f;
             int size = Math.Max(16, (int)Math.Round(18 * scale));
@@ -866,6 +942,49 @@ public sealed class MainForm : Form
             }
             var textBounds = new Rectangle(box.Right + (int)Math.Round(9 * scale), 0,
                 Math.Max(0, Width - box.Right - (int)Math.Round(9 * scale)), Height);
+            TextRenderer.DrawText(e.Graphics, Text, Font, textBounds, Enabled ? ForeColor : Muted,
+                TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
+        }
+
+        protected override void OnCheckedChanged(EventArgs e)
+        {
+            base.OnCheckedChanged(e);
+            Invalidate();
+        }
+    }
+
+    private sealed class ModernRadioButton : RadioButton
+    {
+        public ModernRadioButton()
+        {
+            AutoSize = false;
+            Font = new Font("Segoe UI Semibold", 9F);
+            ForeColor = TextPrimary;
+            Cursor = Cursors.Hand;
+            DoubleBuffered = true;
+            Margin = new Padding(0, 0, 10, 0);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            e.Graphics.Clear(Bg);
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            float scale = DeviceDpi / 96f;
+            int size = Math.Max(15, (int)Math.Round(17 * scale));
+            var circle = new Rectangle(1, (Height - size) / 2, size, size);
+            using var fill = new SolidBrush(White);
+            using var border = new Pen(Checked ? Blue : Color.FromArgb(148, 163, 184), scale);
+            e.Graphics.FillEllipse(fill, circle);
+            e.Graphics.DrawEllipse(border, circle);
+            if (Checked)
+            {
+                int dot = Math.Max(7, (int)Math.Round(9 * scale));
+                var center = new Rectangle(circle.X + (circle.Width - dot) / 2, circle.Y + (circle.Height - dot) / 2, dot, dot);
+                using var selected = new SolidBrush(Blue);
+                e.Graphics.FillEllipse(selected, center);
+            }
+            var textBounds = new Rectangle(circle.Right + (int)Math.Round(8 * scale), 0,
+                Math.Max(0, Width - circle.Right - (int)Math.Round(8 * scale)), Height);
             TextRenderer.DrawText(e.Graphics, Text, Font, textBounds, Enabled ? ForeColor : Muted,
                 TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
         }

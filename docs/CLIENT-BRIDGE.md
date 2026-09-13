@@ -48,6 +48,8 @@ Token là phân tách phiên giữa các tiến trình cục bộ, không phải
 
 Danh sách chọn sẵn gồm các map thế giới 0–72 thường dùng để train. Checkbox, ID và tên map được lưu riêng trong từng hồ sơ. Nút **GET** lấy `dg.X` + `dg.hT` từ đúng phiên client của hồ sơ đang chọn; map sự kiện hoặc map đặc biệt ngoài danh sách được thêm động và vẫn được lưu. GET chỉ khả dụng khi client đã vào màn hình game. Checkbox hiện lưu cấu hình mục tiêu; logic tự tìm và đánh quái được triển khai ở bước automation riêng.
 
+Cấu hình train còn lưu chế độ chọn khu, khu cố định và ba loại mục tiêu: quái thường, tinh anh (TA), thủ lĩnh (TL). `Tàn sát map trống` có nghĩa là ưu tiên khu 0 người, nếu không có thì chọn khu ít người nhất. Ở thay đổi hiện tại đây là cấu hình giao diện đã lưu; lệnh yêu cầu danh sách khu, đếm người và đổi khu trong client sẽ được nối riêng sau khi adapter được kiểm chứng.
+
 ## Build và kiểm tra
 
 Agent viết mới bằng Java, không phân phối mã dịch ngược hoặc thư viện của ZangVPS. Source ở `bridge/src`, JAR được đóng gói base64 trong resource của tool. Người dùng chỉ chạy `Update-Build.bat` như trước; không cần cài thêm JDK. Tool tự trích xuất agent có tên chứa hash phiên bản vào runtime.
